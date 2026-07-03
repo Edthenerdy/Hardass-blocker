@@ -1,19 +1,20 @@
 importScripts('common.js');
 
 const REBLOCK_PREFIX = 'reblock:';
+const SYNC_ALARM = 'syncManaged';
+const MANAGED_BASE = 10000;
 
-function buildRule(domain, ruleId) {
+/* ---------------- DNR rules ---------------- */
+
+function buildRule(domain, ruleId, managed) {
   return {
     id: ruleId,
     priority: 1,
     action: {
       type: 'redirect',
-      redirect: { extensionPath: '/blocked.html?d=' + encodeURIComponent(domain) }
+      redirect: { extensionPath: '/blocked.html?d=' + encodeURIComponent(domain) + (managed ? '&m=1' : '') }
     },
-    condition: {
-      urlFilter: '||' + domain + '^',
-      resourceTypes: ['main_frame']
-    }
+    condition: { urlFilter: '||' + domain + '^', resourceTypes: ['main_frame'] }
   };
 }
 
@@ -22,44 +23,42 @@ function nextRuleId(state) {
   return (ids.length ? Math.max(...ids) : 0) + 1;
 }
 
-async function applyRule(domain, ruleId) {
-  await chrome.declarativeNetRequest.updateDynamicRules({
-    addRules: [buildRule(domain, ruleId)],
-    removeRuleIds: [ruleId]
-  });
+async function clearAllRules() {
+  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  if (existing.length) await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existing.map(r => r.id) });
 }
 
-async function clearRule(ruleId) {
-  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [ruleId] });
-}
+/* ---------------- individual (unmanaged) mode ---------------- */
 
 async function addBlock(rawDomain) {
+  const state = await HB.get();
+  if (HB.isManaged(state) && state.policy && state.policy.enforcement === 'locked') {
+    return { ok: false, error: 'managed' };
+  }
   const domain = HB.normalizeDomain(rawDomain);
   if (!domain) return { ok: false, error: 'empty' };
-  const state = await HB.get();
   if (state.blocklist.some(b => b.domain === domain)) return { ok: true, domain };
   const ruleId = nextRuleId(state);
-  await applyRule(domain, ruleId);
+  await chrome.declarativeNetRequest.updateDynamicRules({ addRules: [buildRule(domain, ruleId, false)], removeRuleIds: [ruleId] });
   state.blocklist.push({ domain, ruleId, addedAt: Date.now() });
   await HB.set({ blocklist: state.blocklist });
   return { ok: true, domain };
 }
 
 async function removeBlock(rawDomain) {
-  const domain = HB.normalizeDomain(rawDomain);
   const state = await HB.get();
+  if (HB.isManaged(state) && state.policy && state.policy.enforcement === 'locked') {
+    return { ok: false, error: 'managed' };
+  }
+  const domain = HB.normalizeDomain(rawDomain);
   const entry = state.blocklist.find(b => b.domain === domain);
   if (!entry) return { ok: true };
-  await clearRule(entry.ruleId);
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [entry.ruleId] });
   state.blocklist = state.blocklist.filter(b => b.domain !== domain);
   delete state.cooldowns[domain];
   delete state.allowances[domain];
   await chrome.alarms.clear(REBLOCK_PREFIX + domain);
-  await HB.set({
-    blocklist: state.blocklist,
-    cooldowns: state.cooldowns,
-    allowances: state.allowances
-  });
+  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances });
   return { ok: true };
 }
 
@@ -68,9 +67,7 @@ async function startCooldown(rawDomain) {
   const state = await HB.get();
   if (!state.blocklist.some(b => b.domain === domain)) return { ok: false, error: 'not-blocked' };
   const existing = state.cooldowns[domain];
-  if (existing && existing.endsAt > Date.now()) {
-    return { ok: true, endsAt: existing.endsAt };
-  }
+  if (existing && existing.endsAt > Date.now()) return { ok: true, endsAt: existing.endsAt };
   const endsAt = Date.now() + state.settings.cooldownMinutes * 60000;
   state.cooldowns[domain] = { startedAt: Date.now(), endsAt };
   await HB.set({ cooldowns: state.cooldowns });
@@ -82,76 +79,163 @@ async function grantAllowance(rawDomain, reason) {
   const state = await HB.get();
   const entry = state.blocklist.find(b => b.domain === domain);
   if (!entry) return { ok: false, error: 'not-blocked' };
-
   const cd = state.cooldowns[domain];
   if (!cd || cd.endsAt > Date.now()) return { ok: false, error: 'cooldown-not-done' };
-  if (!reason || reason.trim().length < state.settings.minReasonChars) {
-    return { ok: false, error: 'reason-too-short' };
-  }
-
+  if (!reason || reason.trim().length < state.settings.minReasonChars) return { ok: false, error: 'reason-too-short' };
   const mins = state.settings.allowanceMinutes;
   const expiresAt = Date.now() + mins * 60000;
-
-  await clearRule(entry.ruleId);
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [entry.ruleId] });
   state.allowances[domain] = expiresAt;
   delete state.cooldowns[domain];
   state.relapseLog.push({ domain, ts: Date.now(), reason: reason.trim(), grantedMin: mins });
-
-  await HB.set({
-    allowances: state.allowances,
-    cooldowns: state.cooldowns,
-    relapseLog: state.relapseLog
-  });
+  await HB.set({ allowances: state.allowances, cooldowns: state.cooldowns, relapseLog: state.relapseLog });
   await chrome.alarms.create(REBLOCK_PREFIX + domain, { when: expiresAt });
   return { ok: true, expiresAt, domain };
 }
 
 async function reblock(domain) {
   const state = await HB.get();
+  if (HB.isManaged(state)) return;
   delete state.allowances[domain];
   await HB.set({ allowances: state.allowances });
   const entry = state.blocklist.find(b => b.domain === domain);
-  if (entry) await applyRule(entry.domain, entry.ruleId);
+  if (entry) await chrome.declarativeNetRequest.updateDynamicRules({ addRules: [buildRule(entry.domain, entry.ruleId, false)], removeRuleIds: [entry.ruleId] });
 }
 
-async function resyncRules() {
+async function resyncLocalRules() {
   const state = await HB.get();
   const now = Date.now();
-  const existing = await chrome.declarativeNetRequest.getDynamicRules();
-  const removeRuleIds = existing.map(r => r.id);
+  await clearAllRules();
   const addRules = state.blocklist
     .filter(b => !(state.allowances[b.domain] && state.allowances[b.domain] > now))
-    .map(b => buildRule(b.domain, b.ruleId));
-  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
+    .map(b => buildRule(b.domain, b.ruleId, false));
+  if (addRules.length) await chrome.declarativeNetRequest.updateDynamicRules({ addRules });
 }
 
+/* ---------------- managed (team) mode ---------------- */
+
+function baseUrl(team) { return String(team.serverUrl || '').replace(/\/+$/, ''); }
+
+async function serverFetch(path, opts) {
+  const { team } = await HB.get();
+  if (!team) throw new Error('not-managed');
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + team.deviceToken }, opts.headers || {});
+  const res = await fetch(baseUrl(team) + path, opts);
+  return res.json();
+}
+
+async function applyManagedRules(policy) {
+  const now = Date.now();
+  const allowed = new Set((policy.allowances || []).filter(a => a.expiresAt > now).map(a => a.domain));
+  const domains = (policy.blocklist || []).filter(d => !allowed.has(d));
+  await clearAllRules();
+  const addRules = domains.map((d, i) => buildRule(d, MANAGED_BASE + i, true));
+  if (addRules.length) await chrome.declarativeNetRequest.updateDynamicRules({ addRules });
+}
+
+async function syncManaged() {
+  const state = await HB.get();
+  if (!HB.isManaged(state)) return { ok: false, error: 'not-managed' };
+  let j;
+  try { j = await serverFetch('/api/device/policy', { method: 'GET' }); }
+  catch (e) { return { ok: false, error: 'offline' }; }
+  if (!j.ok) return j;
+  await HB.set({ policy: j.policy });
+  await applyManagedRules(j.policy);
+  return { ok: true, policy: j.policy };
+}
+
+async function enrollTeam(serverUrl, code, deviceName) {
+  serverUrl = String(serverUrl || '').replace(/\/+$/, '');
+  if (!serverUrl) return { ok: false, error: 'no server url' };
+  let j;
+  try {
+    const res = await fetch(serverUrl + '/api/enroll', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, deviceName })
+    });
+    j = await res.json();
+  } catch (e) { return { ok: false, error: 'cannot reach server' }; }
+  if (!j.ok) return j;
+  await HB.set({ team: { serverUrl, deviceToken: j.deviceToken, deviceId: j.device.id }, policy: j.policy });
+  await clearAllRules();
+  await applyManagedRules(j.policy);
+  await chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 0.5 });
+  return { ok: true, policy: j.policy };
+}
+
+async function leaveTeam() {
+  const state = await HB.get();
+  if (state.policy && state.policy.enforcement === 'locked') return { ok: false, error: 'locked' };
+  await chrome.alarms.clear(SYNC_ALARM);
+  await HB.set({ team: null, policy: null });
+  await resyncLocalRules();
+  return { ok: true };
+}
+
+async function requestAccess(domain, reason, requestedMin) {
+  try { return await serverFetch('/api/device/requests', { method: 'POST', body: JSON.stringify({ domain: HB.normalizeDomain(domain), reason, requestedMin }) }); }
+  catch (e) { return { ok: false, error: 'offline' }; }
+}
+
+async function pollRequests() {
+  try { return await serverFetch('/api/device/requests', { method: 'GET' }); }
+  catch (e) { return { ok: false, error: 'offline' }; }
+}
+
+async function selfGrantManaged(domain, reason) {
+  let j;
+  try { j = await serverFetch('/api/device/selfgrant', { method: 'POST', body: JSON.stringify({ domain: HB.normalizeDomain(domain), reason }) }); }
+  catch (e) { return { ok: false, error: 'offline' }; }
+  if (j.ok) await syncManaged();
+  return j;
+}
+
+async function telemetry(domain, event) {
+  try { await serverFetch('/api/device/telemetry', { method: 'POST', body: JSON.stringify({ domain: HB.normalizeDomain(domain), type: event === 'allowed' ? 'allowed' : 'blocked' }) }); }
+  catch (e) { /* offline: ignore */ }
+}
+
+/* ---------------- lifecycle ---------------- */
+
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name.startsWith(REBLOCK_PREFIX)) {
-    reblock(alarm.name.slice(REBLOCK_PREFIX.length));
-  }
+  if (alarm.name === SYNC_ALARM) syncManaged();
+  else if (alarm.name.startsWith(REBLOCK_PREFIX)) reblock(alarm.name.slice(REBLOCK_PREFIX.length));
 });
 
 chrome.runtime.onInstalled.addListener(async details => {
+  const state = await HB.get();
+  if (HB.isManaged(state)) { await syncManaged(); return; }
   if (details.reason === 'install') {
-    for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) {
-      await addBlock(d);
-    }
+    for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) await addBlock(d);
   } else {
-    await resyncRules();
+    await resyncLocalRules();
   }
 });
 
-chrome.runtime.onStartup.addListener(() => { resyncRules(); });
+chrome.runtime.onStartup.addListener(async () => {
+  const state = await HB.get();
+  if (HB.isManaged(state)) { await chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 0.5 }); await syncManaged(); }
+  else await resyncLocalRules();
+});
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     try {
       switch (msg && msg.type) {
+        case 'getState': return sendResponse({ ok: true, state: await HB.get() });
         case 'addBlock': return sendResponse(await addBlock(msg.domain));
         case 'removeBlock': return sendResponse(await removeBlock(msg.domain));
         case 'startCooldown': return sendResponse(await startCooldown(msg.domain));
         case 'grantAllowance': return sendResponse(await grantAllowance(msg.domain, msg.reason));
-        case 'resync': await resyncRules(); return sendResponse({ ok: true });
+        case 'enrollTeam': return sendResponse(await enrollTeam(msg.serverUrl, msg.code, msg.deviceName));
+        case 'leaveTeam': return sendResponse(await leaveTeam());
+        case 'syncNow': return sendResponse(await syncManaged());
+        case 'requestAccess': return sendResponse(await requestAccess(msg.domain, msg.reason, msg.requestedMin));
+        case 'pollRequests': return sendResponse(await pollRequests());
+        case 'selfGrantManaged': return sendResponse(await selfGrantManaged(msg.domain, msg.reason));
+        case 'telemetry': await telemetry(msg.domain, msg.event); return sendResponse({ ok: true });
         default: return sendResponse({ ok: false, error: 'unknown' });
       }
     } catch (e) {

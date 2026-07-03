@@ -87,6 +87,22 @@ Enrol with `NSD-7P3-ZW8` instead to land in the **Clinicians** group, which uses
 - **Non-MDM enrolment** — a device joins with a short code, no device-management suite, no IT.
 - Plus telemetry → **compliance reporting** (blocked attempts per site), the reason a clinic or call centre buys.
 
+### Connect the *real* extension to a team (managed mode)
+
+The browser extension in [`extension/`](extension/) is now the real enforcement agent — not just the web simulator. With the server running:
+
+1. Load the extension (`chrome://extensions` → Developer mode → Load unpacked → `extension/`).
+2. Open its options (popup → **Settings, team & history**) → **Team (managed mode)**.
+3. Server URL `http://localhost:8787`, enrollment code `NSD-4K9-QX2`, then **Enrol this device**.
+
+Now the extension:
+- pulls its blocklist and rules from the server and re-syncs every 30s (and on approval),
+- **locks down** — when the policy is `locked`, the popup shows "Managed by …" and the user can't add, remove, or disable anything,
+- routes unblock attempts through the server: **admin-approval** groups create a request the admin approves in the console; **cooldown** groups run the wait then self-grant,
+- reports blocked attempts as telemetry → the console's reports.
+
+Leaving a team is blocked while the policy is `locked` — exactly the "can't talk your way out of it" promise, enforced by the org instead of a timer.
+
 ### Enterprise backend notes
 
 - Zero npm dependencies — plain Node `http`, `crypto` (scrypt password hashing), JSON-file store (`server/data.json`, gitignored, seeded on first run).
@@ -107,11 +123,11 @@ Enrol with `NSD-7P3-ZW8` instead to land in the **Clinicians** group, which uses
 ## Roadmap
 
 - [x] SME tier POC: central admin console, admin-enforced blocklists, admin-approved unblocks, non-MDM enrolment, compliance reporting *(see `server/` + `console/` + `device/`)*.
-- [ ] Gate blocklist *removal* behind the same cooldown (close the obvious escape) in the individual extension.
-- [ ] Cross-browser + desktop agent (the more defensible surface).
-- [ ] Real circumvention-resistance (uninstall/DNS/other-browser).
-- [ ] Wire the *real* extension into managed mode (enrol → pull policy from the server → lock removal), replacing the web device simulator.
-- [ ] Production backend: real DB, multi-tenancy, SSO, Stripe billing, HTTPS.
+- [x] Wire the *real* extension into managed mode — enrol → pull policy from the server → sync every 30s → lock down add/remove/disable → server-backed request/approval + cooldown + telemetry.
+- [x] Gate blocklist *removal* behind a think-delay in the individual extension (managed+locked disables it entirely).
+- [ ] Cross-browser (Firefox/Edge) + native desktop agent — the more defensible surface. *(needs: build targets)*
+- [ ] Real circumvention-resistance (uninstall prevention, DNS, other-browser, safe mode). *(the hard, ongoing engineering)*
+- [ ] Production backend: real DB + multi-tenancy, SSO, Stripe billing, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
 
 ---
 

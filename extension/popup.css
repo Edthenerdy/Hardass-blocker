@@ -111,3 +111,17 @@ button {
 }
 
 .ghost:hover { color: var(--bone); }
+
+.managedBanner {
+  background: #2a0f0a;
+  border: 0.5px solid #4A1B0C;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 12px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.managedBanner strong { color: var(--bone); }
+
+.list .remove.confirm { color: var(--redline); border-color: var(--redline); }
+.list .status.managed { color: var(--redline); }

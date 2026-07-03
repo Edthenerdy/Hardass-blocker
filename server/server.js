@@ -17,9 +17,15 @@ db.load();
 
 /* ---------------- helpers ---------------- */
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS'
+};
+
 function send(res, status, body, headers) {
   const data = typeof body === 'string' ? body : JSON.stringify(body);
-  res.writeHead(status, Object.assign({ 'Content-Type': typeof body === 'string' ? 'text/plain' : 'application/json' }, headers || {}));
+  res.writeHead(status, Object.assign({ 'Content-Type': typeof body === 'string' ? 'text/plain' : 'application/json' }, CORS, headers || {}));
   res.end(data);
 }
 
@@ -318,6 +324,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = decodeURIComponent(url.parse(req.url).pathname);
 
   try {
+    if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (pathname === '/') { res.writeHead(302, { Location: '/console/' }); return res.end(); }
     if (pathname.startsWith('/api/')) return await api(req, res, pathname);
     if (pathname === '/console' || pathname.startsWith('/console/')) {

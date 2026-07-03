@@ -18,11 +18,15 @@
     </div>
   </header>
 
-  <div class="add">
-    <input id="siteInput" type="text" placeholder="instagram.com" autocomplete="off" spellcheck="false" />
-    <button id="addBtn">Block</button>
+  <div id="managedBanner" class="managedBanner" hidden></div>
+
+  <div id="addWrap">
+    <div class="add">
+      <input id="siteInput" type="text" placeholder="instagram.com" autocomplete="off" spellcheck="false" />
+      <button id="addBtn">Block</button>
+    </div>
+    <p id="addHint" class="hint"></p>
   </div>
-  <p id="addHint" class="hint"></p>
 
   <div class="listHead">
     <span>Blocked sites</span>
@@ -31,7 +35,7 @@
   <ul id="list" class="list"></ul>
   <p id="empty" class="empty" hidden>Nothing blocked yet. Add a site above.</p>
 
-  <button id="optionsBtn" class="ghost">Settings &amp; history</button>
+  <button id="optionsBtn" class="ghost">Settings, team &amp; history</button>
 
   <script src="common.js"></script>
   <script src="popup.js"></script>

@@ -8,7 +8,13 @@ const HB = {
     blocklist: [],
     allowances: {},
     cooldowns: {},
-    relapseLog: []
+    relapseLog: [],
+    team: null,
+    policy: null
+  },
+
+  isManaged(state) {
+    return !!(state && state.team && state.team.deviceToken);
   },
 
   async get() {

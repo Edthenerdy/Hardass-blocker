@@ -11,11 +11,72 @@
     clearLogBtn: document.getElementById('clearLogBtn')
   };
 
+  const team = {
+    unmanaged: document.getElementById('teamUnmanaged'),
+    managed: document.getElementById('teamManaged'),
+    info: document.getElementById('teamInfo'),
+    serverUrl: document.getElementById('serverUrl'),
+    code: document.getElementById('enrollCode'),
+    deviceName: document.getElementById('deviceName'),
+    enrollBtn: document.getElementById('enrollBtn'),
+    enrollMsg: document.getElementById('enrollMsg'),
+    syncBtn: document.getElementById('syncBtn'),
+    leaveBtn: document.getElementById('leaveBtn'),
+    teamMsg: document.getElementById('teamMsg')
+  };
+
   function fmtDate(ts) {
     const d = new Date(ts);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
       ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   }
+
+  async function loadTeam() {
+    const state = await HB.get();
+    const managed = HB.isManaged(state);
+    team.unmanaged.hidden = managed;
+    team.managed.hidden = !managed;
+    if (managed) {
+      const p = state.policy || {};
+      const locked = p.enforcement === 'locked';
+      team.info.innerHTML =
+        '<div class="note" style="margin-bottom:10px">Managed by <strong style="color:var(--bone)">' + (p.org || '') + '</strong> · group <strong style="color:var(--bone)">' + (p.group || '') + '</strong></div>' +
+        '<div class="log"><table class="log"><tbody>' +
+        '<tr><td>Enforcement</td><td>' + (p.enforcement || '') + '</td></tr>' +
+        '<tr><td>Unblock mode</td><td>' + (p.unblockMode || '') + '</td></tr>' +
+        '<tr><td>Blocked sites</td><td>' + ((p.blocklist || []).length) + '</td></tr>' +
+        '</tbody></table></div>';
+      team.leaveBtn.disabled = locked;
+      team.leaveBtn.title = locked ? "Locked by your admin — you can't leave" : '';
+      team.leaveBtn.textContent = locked ? "Leave team (locked by admin)" : 'Leave team';
+    }
+  }
+
+  team.enrollBtn.addEventListener('click', async () => {
+    team.enrollMsg.textContent = 'Enrolling…';
+    const res = await chrome.runtime.sendMessage({
+      type: 'enrollTeam',
+      serverUrl: team.serverUrl.value.trim(),
+      code: team.code.value.trim(),
+      deviceName: team.deviceName.value.trim() || 'Unnamed device'
+    });
+    if (res && res.ok) { team.enrollMsg.textContent = 'Enrolled.'; loadTeam(); load(); }
+    else team.enrollMsg.textContent = (res && res.error) || 'Enrollment failed';
+  });
+
+  team.syncBtn.addEventListener('click', async () => {
+    team.teamMsg.textContent = 'Syncing…';
+    const res = await chrome.runtime.sendMessage({ type: 'syncNow' });
+    team.teamMsg.textContent = res && res.ok ? 'Synced.' : ((res && res.error) || 'Sync failed');
+    loadTeam();
+    setTimeout(() => { team.teamMsg.textContent = ''; }, 1800);
+  });
+
+  team.leaveBtn.addEventListener('click', async () => {
+    const res = await chrome.runtime.sendMessage({ type: 'leaveTeam' });
+    if (res && res.ok) { team.teamMsg.textContent = 'Left team.'; loadTeam(); }
+    else team.teamMsg.textContent = res && res.error === 'locked' ? "Locked by your admin — you can't leave." : 'Could not leave';
+  });
 
   async function load() {
     const state = await HB.get();
@@ -68,4 +129,5 @@
   });
 
   load();
+  loadTeam();
 })();
