@@ -14,8 +14,16 @@ This repo contains the concept, the brand, and a working proof-of-concept.
 |---|---|
 | [`docs/BUSINESS-PLAN.md`](docs/BUSINESS-PLAN.md) | Strategy, market analysis, competitive map, pricing, GTM, risks |
 | [`docs/BRAND.md`](docs/BRAND.md) | Brand guide — voice, logo, palette, typography |
-| [`extension/`](extension/) | The POC — a Manifest V3 Chrome extension |
+| [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Hardass" product) |
+| [`server/`](server/) | Enterprise POC backend — Node.js API (auth, policy sync, approvals, telemetry) |
+| [`console/`](console/) | Enterprise POC — the admin console (Deadbolt for Teams) |
+| [`device/`](device/) | Enterprise POC — a managed-device client that enrols and enforces policy |
 | [`tools/gen-icons.js`](tools/gen-icons.js) | Dependency-free PNG icon generator |
+
+There are two products here sharing one idea, matching the business plan's two phases:
+
+1. **Hardass Blocker** (`extension/`) — the individual product. Self-discipline via the Cooldown.
+2. **Deadbolt for Teams** (`server/` + `console/` + `device/`) — the SME product. The *same enforcement idea*, but the admin holds the key. This is the part that has no equivalent on the market (Freedom has a team tier but refuses to enforce; MDM is overkill).
 
 ---
 
@@ -46,7 +54,46 @@ The wait kills the impulse. The written reason kills the self-deception. The his
 
 ---
 
-## Architecture (POC)
+## Deadbolt for Teams — the enterprise POC (full-stack)
+
+The SME tier the business plan calls the real business: **admin-enforced** blocking, deployed without MDM. It's a working full-stack slice — a Node backend, an admin console, and a device client that enrols, pulls its policy, enforces it, and asks the admin for access.
+
+### Run it
+
+```bash
+cd server
+npm start          # or: node server.js   (no dependencies to install)
+```
+
+Then open two tabs:
+
+- **Admin console** — <http://localhost:8787/console/> — sign in with `admin@northshore.example` / `deadbolt`
+- **Device client** — <http://localhost:8787/device/> — enrol with code `NSD-4K9-QX2`
+
+### The end-to-end loop to try
+
+1. In the **device** tab, type `instagram.com` and hit Go → you're **blocked** (policy synced from the server, enforced client-side).
+2. Write a reason and click **Request access**.
+3. Switch to the **console** tab → the request appears under **Access requests** → click **Approve**.
+4. Back on the **device**, it auto-detects the approval, re-syncs, and the site now loads for the granted window.
+
+Enrol with `NSD-7P3-ZW8` instead to land in the **Clinicians** group, which uses *cooldown* mode (self-serve wait) rather than admin approval — showing both enforcement styles from one engine.
+
+### What it demonstrates (and the four things nobody else combines)
+
+- **Central, admin-set policy** — blocklists, categories, schedule, cooldown, enforcement level — that devices sync automatically.
+- **Locked enforcement** — the device is "managed"; the user can't disable it (vs Freedom, which refuses to enforce).
+- **Admin-approved unblocks** — the enterprise version of the Cooldown: the admin holds the key.
+- **Non-MDM enrolment** — a device joins with a short code, no device-management suite, no IT.
+- Plus telemetry → **compliance reporting** (blocked attempts per site), the reason a clinic or call centre buys.
+
+### Enterprise backend notes
+
+- Zero npm dependencies — plain Node `http`, `crypto` (scrypt password hashing), JSON-file store (`server/data.json`, gitignored, seeded on first run).
+- Token auth: admin tokens and per-device tokens. Device endpoints are device-scoped; admin endpoints require an admin token (unauthorized calls 401).
+- This is a POC: single-tenant seed data, file storage, no HTTPS/SSO/billing yet. Production needs a real DB, multi-tenancy, SSO, Stripe, and the managed *browser extension* (not just the web simulator) as the enforcement agent.
+
+## Architecture (individual extension POC)
 
 - **Manifest V3**, `declarativeNetRequest` dynamic rules redirect blocked domains to the block page.
 - **`background.js`** — service worker: manages the blocklist, cooldowns, time-boxed allowances (via `chrome.alarms`), and the relapse log.
@@ -59,10 +106,12 @@ The wait kills the impulse. The written reason kills the self-deception. The his
 
 ## Roadmap
 
-- [ ] Gate blocklist *removal* behind the same cooldown (close the obvious escape).
+- [x] SME tier POC: central admin console, admin-enforced blocklists, admin-approved unblocks, non-MDM enrolment, compliance reporting *(see `server/` + `console/` + `device/`)*.
+- [ ] Gate blocklist *removal* behind the same cooldown (close the obvious escape) in the individual extension.
 - [ ] Cross-browser + desktop agent (the more defensible surface).
 - [ ] Real circumvention-resistance (uninstall/DNS/other-browser).
-- [ ] SME tier: central admin console, admin-enforced blocklists, non-MDM deployment.
+- [ ] Wire the *real* extension into managed mode (enrol → pull policy from the server → lock removal), replacing the web device simulator.
+- [ ] Production backend: real DB, multi-tenancy, SSO, Stripe billing, HTTPS.
 
 ---
 

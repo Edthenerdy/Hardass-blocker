@@ -1,0 +1,14 @@
+{
+  "name": "deadbolt-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deadbolt for Teams — enterprise enforcement backend + admin console + device client (full-stack POC)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "reset": "node -e \"require('fs').rmSync('./data.json',{force:true});console.log('data reset')\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deadbolt — Managed device</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div id="enroll" class="center" hidden>
+    <form id="enrollForm" class="card">
+      <div class="brandRow">
+        <svg viewBox="0 0 120 120" width="28" height="28" aria-hidden="true"><rect x="20" y="20" width="80" height="80" rx="20" fill="#FF3B30"/><rect x="34" y="54" width="54" height="12" rx="6" fill="#0E0E10"/><circle cx="44" cy="60" r="12" fill="#0E0E10"/></svg>
+        <div><strong>Deadbolt</strong> <span class="muted">device client</span></div>
+      </div>
+      <h1>Enrol this device</h1>
+      <p class="muted small">Simulates the managed browser extension on a staff device.</p>
+      <label for="code">Enrollment code</label>
+      <input id="code" type="text" value="NSD-4K9-QX2" />
+      <label for="devName">Device name</label>
+      <input id="devName" type="text" value="Reception-PC-01" />
+      <button type="submit" class="primary">Enrol</button>
+      <p id="enrollErr" class="err"></p>
+      <p class="muted small">Front desk code: NSD-4K9-QX2 (admin-approval) · Clinicians code: NSD-7P3-ZW8 (cooldown)</p>
+    </form>
+  </div>
+
+  <div id="managed" class="managed" hidden>
+    <div class="banner">
+      <svg viewBox="0 0 120 120" width="20" height="20" aria-hidden="true"><rect x="20" y="20" width="80" height="80" rx="20" fill="#FF3B30"/><rect x="34" y="54" width="54" height="12" rx="6" fill="#0E0E10"/><circle cx="44" cy="60" r="12" fill="#0E0E10"/></svg>
+      <span id="bannerText">Managed device</span>
+      <button id="unenroll" class="ghost small">Reset device</button>
+    </div>
+
+    <div class="browser">
+      <div class="bar">
+        <span class="muted">https://</span>
+        <input id="addr" type="text" placeholder="instagram.com" autocomplete="off" spellcheck="false" />
+        <button id="go" class="primary small">Go</button>
+      </div>
+      <div id="viewport" class="viewport"></div>
+    </div>
+
+    <details class="policyPeek">
+      <summary>What this device enforces</summary>
+      <div id="policyInfo"></div>
+    </details>
+  </div>
+
+  <script src="device.js"></script>
+</body>
+</html>
