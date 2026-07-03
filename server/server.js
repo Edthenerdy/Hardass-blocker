@@ -4,16 +4,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 const url = require('node:url');
 
-const db = require('./db');
-const { hashPassword, verifyPassword, newToken, newId } = require('./auth');
+const { createStore } = require('./store');
+const { verifyPassword, newToken, newId } = require('./auth');
 const CATEGORIES = require('./categories');
 
 const PORT = process.env.PORT || 8787;
 const ROOT = path.join(__dirname, '..');
 const TOKEN_TTL = 12 * 60 * 60 * 1000;
+const DEVICE_TOKEN_TTL = 365 * 24 * 3600 * 1000;
 const ONLINE_WINDOW = 5 * 60 * 1000;
 
-db.load();
+const store = createStore();
 
 /* ---------------- helpers ---------------- */
 
@@ -45,11 +46,12 @@ function bearer(req) {
   return h.startsWith('Bearer ') ? h.slice(7) : null;
 }
 
-function auth(req, kind) {
-  const data = db.get();
+// resolves the token to its record ({kind, orgId, id, expiresAt}); every
+// authed request is tenant-scoped by rec.orgId from here on.
+async function auth(req, kind) {
   const t = bearer(req);
   if (!t) return null;
-  const rec = data.tokens[t];
+  const rec = await store.getToken(t);
   if (!rec || rec.expiresAt < Date.now()) return null;
   if (kind && rec.kind !== kind) return null;
   return rec;
@@ -68,29 +70,18 @@ function expandBlocklist(policy) {
   return [...set].sort();
 }
 
-function groupFor(device) {
-  return db.get().groups.find(g => g.id === device.groupId);
-}
-
-function activeAllowances(deviceId) {
-  const now = Date.now();
-  return db.get().requests
-    .filter(r => r.deviceId === deviceId && r.status === 'approved' && r.expiresAt > now)
-    .map(r => ({ domain: r.domain, expiresAt: r.expiresAt }));
-}
-
-function effectivePolicy(device) {
-  const g = groupFor(device);
+async function effectivePolicy(orgId, device) {
+  const [org, g] = await Promise.all([store.getOrg(orgId), store.getGroup(orgId, device.groupId)]);
   const p = g.policy;
   return {
-    org: db.get().org.name,
+    org: org.name,
     group: g.name,
     enforcement: p.enforcement,
     unblockMode: p.unblockMode,
     cooldownMinutes: p.cooldownMinutes,
     allowanceMinutes: p.allowanceMinutes,
     blocklist: expandBlocklist(p),
-    allowances: activeAllowances(device.id)
+    allowances: await store.activeAllowances(orgId, device.id, Date.now())
   };
 }
 
@@ -113,31 +104,29 @@ function serveStatic(res, baseDir, rel) {
 /* ---------------- API ---------------- */
 
 async function api(req, res, pathname) {
-  const data = db.get();
   const parts = pathname.split('/').filter(Boolean); // ['api', ...]
   const seg = parts.slice(1);
   const method = req.method;
 
-  // POST /api/auth/login
+  // POST /api/auth/login  (global: email resolves the tenant)
   if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'login') {
     const body = await readBody(req);
-    const admin = data.admins.find(a => a.email.toLowerCase() === String(body.email || '').toLowerCase());
+    const admin = await store.findAdminByEmail(String(body.email || ''));
     if (!admin || !verifyPassword(String(body.password || ''), admin.salt, admin.hash)) {
       return send(res, 401, { ok: false, error: 'Wrong email or password' });
     }
     const token = newToken();
-    data.tokens[token] = { kind: 'admin', id: admin.id, expiresAt: Date.now() + TOKEN_TTL };
-    db.save();
-    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org: data.org });
+    await store.putToken(token, { kind: 'admin', orgId: admin.orgId, id: admin.id, expiresAt: Date.now() + TOKEN_TTL });
+    const org = await store.getOrg(admin.orgId);
+    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org });
   }
 
   /* ----- device endpoints ----- */
 
-  // POST /api/enroll {code, deviceName}
+  // POST /api/enroll {code, deviceName}  (global: code resolves the tenant)
   if (method === 'POST' && seg[0] === 'enroll') {
     const body = await readBody(req);
-    const code = String(body.code || '').trim().toUpperCase();
-    const entry = data.enrollmentCodes.find(e => e.code === code);
+    const entry = await store.findEnrollmentCode(body.code);
     if (!entry) return send(res, 400, { ok: false, error: 'Invalid enrollment code' });
     const device = {
       id: newId('dev'),
@@ -146,37 +135,35 @@ async function api(req, res, pathname) {
       enrolledAt: Date.now(),
       lastSeen: Date.now()
     };
-    data.devices.push(device);
+    await store.createDevice(entry.orgId, device);
     const token = newToken();
-    data.tokens[token] = { kind: 'device', id: device.id, expiresAt: Date.now() + 365 * 24 * 3600 * 1000 };
-    db.save();
-    return send(res, 200, { ok: true, deviceToken: token, device: { id: device.id, name: device.name }, policy: effectivePolicy(device) });
+    await store.putToken(token, { kind: 'device', orgId: entry.orgId, id: device.id, expiresAt: Date.now() + DEVICE_TOKEN_TTL });
+    return send(res, 200, { ok: true, deviceToken: token, device: { id: device.id, name: device.name }, policy: await effectivePolicy(entry.orgId, device) });
   }
 
   // device-authed routes
   if (seg[0] === 'device') {
-    const rec = auth(req, 'device');
+    const rec = await auth(req, 'device');
     if (!rec) return send(res, 401, { ok: false, error: 'device not enrolled' });
-    const device = data.devices.find(d => d.id === rec.id);
+    const orgId = rec.orgId;
+    const device = await store.getDevice(orgId, rec.id);
     if (!device) return send(res, 401, { ok: false, error: 'unknown device' });
-    device.lastSeen = Date.now();
+    await store.touchDevice(orgId, device.id, Date.now());
 
     // GET /api/device/policy
     if (method === 'GET' && seg[1] === 'policy') {
-      db.save();
-      return send(res, 200, { ok: true, policy: effectivePolicy(device) });
+      return send(res, 200, { ok: true, policy: await effectivePolicy(orgId, device) });
     }
     // POST /api/device/telemetry {domain, type}
     if (method === 'POST' && seg[1] === 'telemetry') {
       const body = await readBody(req);
-      data.events.push({ id: newId('ev'), deviceId: device.id, domain: normalizeDomain(body.domain), type: body.type === 'allowed' ? 'allowed' : 'blocked', ts: Date.now() });
-      db.save();
+      await store.addEvent(orgId, { id: newId('ev'), deviceId: device.id, domain: normalizeDomain(body.domain), type: body.type === 'allowed' ? 'allowed' : 'blocked', ts: Date.now() });
       return send(res, 200, { ok: true });
     }
     // POST /api/device/selfgrant {domain, reason}  (cooldown mode only)
     if (method === 'POST' && seg[1] === 'selfgrant') {
       const body = await readBody(req);
-      const g = groupFor(device);
+      const g = await store.getGroup(orgId, device.groupId);
       if (g.policy.unblockMode !== 'cooldown') return send(res, 400, { ok: false, error: 'not cooldown mode' });
       const domain = normalizeDomain(body.domain);
       if (!domain) return send(res, 400, { ok: false, error: 'no domain' });
@@ -187,8 +174,7 @@ async function api(req, res, pathname) {
         domain, reason: String(body.reason).slice(0, 300), requestedMin: mins, status: 'approved',
         grantedMin: mins, createdAt: Date.now(), decidedAt: Date.now(), expiresAt: Date.now() + mins * 60000, selfServe: true
       };
-      data.requests.push(request);
-      db.save();
+      await store.createRequest(orgId, request);
       return send(res, 200, { ok: true, request });
     }
     // POST /api/device/requests {domain, reason, requestedMin}
@@ -196,7 +182,7 @@ async function api(req, res, pathname) {
       const body = await readBody(req);
       const domain = normalizeDomain(body.domain);
       if (!domain) return send(res, 400, { ok: false, error: 'no domain' });
-      const existing = data.requests.find(r => r.deviceId === device.id && r.domain === domain && r.status === 'pending');
+      const existing = await store.findPendingRequest(orgId, device.id, domain);
       if (existing) return send(res, 200, { ok: true, request: existing });
       const request = {
         id: newId('req'),
@@ -209,87 +195,94 @@ async function api(req, res, pathname) {
         status: 'pending',
         createdAt: Date.now()
       };
-      data.requests.push(request);
-      db.save();
+      await store.createRequest(orgId, request);
       return send(res, 200, { ok: true, request });
     }
     // GET /api/device/requests
     if (method === 'GET' && seg[1] === 'requests') {
-      const mine = data.requests.filter(r => r.deviceId === device.id).sort((a, b) => b.createdAt - a.createdAt);
-      db.save();
+      const mine = (await store.listRequestsByDevice(orgId, device.id)).sort((a, b) => b.createdAt - a.createdAt);
       return send(res, 200, { ok: true, requests: mine });
     }
     return send(res, 404, { ok: false, error: 'unknown device route' });
   }
 
-  /* ----- admin endpoints (all require admin token) ----- */
+  /* ----- admin endpoints (all require admin token; scoped to rec.orgId) ----- */
 
-  const rec = auth(req, 'admin');
+  const rec = await auth(req, 'admin');
   if (!rec) return send(res, 401, { ok: false, error: 'unauthorized' });
+  const orgId = rec.orgId;
 
   // GET /api/dashboard
   if (method === 'GET' && seg[0] === 'dashboard') {
     const now = Date.now();
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const online = data.devices.filter(d => now - d.lastSeen < ONLINE_WINDOW).length;
-    const blocksToday = data.events.filter(e => e.type === 'blocked' && e.ts >= startOfDay.getTime()).length;
-    const pending = data.requests.filter(r => r.status === 'pending').length;
+    const [org, devices, blocksToday, pending] = await Promise.all([
+      store.getOrg(orgId),
+      store.listDevices(orgId),
+      store.countBlockedSince(orgId, startOfDay.getTime()),
+      store.countPendingRequests(orgId)
+    ]);
+    const online = devices.filter(d => now - d.lastSeen < ONLINE_WINDOW).length;
     return send(res, 200, {
       ok: true,
       devicesOnline: online,
-      devicesEnrolled: data.devices.length,
-      seats: data.org.seats,
+      devicesEnrolled: devices.length,
+      seats: org.seats,
       blocksToday,
       pendingRequests: pending,
-      coverage: data.org.seats ? Math.min(100, Math.round((data.devices.length / data.org.seats) * 100)) : 0
+      coverage: org.seats ? Math.min(100, Math.round((devices.length / org.seats) * 100)) : 0
     });
   }
 
   // GET /api/groups
   if (method === 'GET' && seg[0] === 'groups' && !seg[1]) {
-    return send(res, 200, { ok: true, groups: data.groups, categories: Object.keys(CATEGORIES) });
+    return send(res, 200, { ok: true, groups: await store.listGroups(orgId), categories: Object.keys(CATEGORIES) });
   }
 
   // PUT /api/groups/:id/policy
   if (method === 'PUT' && seg[0] === 'groups' && seg[2] === 'policy') {
     const body = await readBody(req);
-    const g = data.groups.find(x => x.id === seg[1]);
+    const g = await store.getGroup(orgId, seg[1]);
     if (!g) return send(res, 404, { ok: false, error: 'no group' });
-    const p = g.policy;
-    if (['locked', 'advisory'].includes(body.enforcement)) p.enforcement = body.enforcement;
-    if (['admin-approval', 'cooldown', 'none'].includes(body.unblockMode)) p.unblockMode = body.unblockMode;
-    if (Number.isFinite(+body.cooldownMinutes)) p.cooldownMinutes = Math.max(1, Math.min(180, +body.cooldownMinutes));
-    if (Number.isFinite(+body.allowanceMinutes)) p.allowanceMinutes = Math.max(1, Math.min(120, +body.allowanceMinutes));
-    if (Array.isArray(body.categories)) p.categories = body.categories.filter(c => CATEGORIES[c]);
-    if (Array.isArray(body.customBlocklist)) p.customBlocklist = body.customBlocklist.map(normalizeDomain).filter(Boolean);
-    db.save();
-    return send(res, 200, { ok: true, group: g });
+    const patch = {};
+    if (['locked', 'advisory'].includes(body.enforcement)) patch.enforcement = body.enforcement;
+    if (['admin-approval', 'cooldown', 'none'].includes(body.unblockMode)) patch.unblockMode = body.unblockMode;
+    if (Number.isFinite(+body.cooldownMinutes)) patch.cooldownMinutes = Math.max(1, Math.min(180, +body.cooldownMinutes));
+    if (Number.isFinite(+body.allowanceMinutes)) patch.allowanceMinutes = Math.max(1, Math.min(120, +body.allowanceMinutes));
+    if (Array.isArray(body.categories)) patch.categories = body.categories.filter(c => CATEGORIES[c]);
+    if (Array.isArray(body.customBlocklist)) patch.customBlocklist = body.customBlocklist.map(normalizeDomain).filter(Boolean);
+    const updated = await store.updateGroupPolicy(orgId, seg[1], patch);
+    return send(res, 200, { ok: true, group: updated });
   }
 
   // GET /api/devices
   if (method === 'GET' && seg[0] === 'devices') {
     const now = Date.now();
-    const list = data.devices.map(d => ({
+    const [devices, groups, codes] = await Promise.all([
+      store.listDevices(orgId), store.listGroups(orgId), store.listEnrollmentCodes(orgId)
+    ]);
+    const groupName = id => (groups.find(g => g.id === id) || {}).name;
+    const list = devices.map(d => ({
       id: d.id, name: d.name,
-      group: (groupFor(d) || {}).name,
+      group: groupName(d.groupId),
       online: now - d.lastSeen < ONLINE_WINDOW,
       lastSeen: d.lastSeen
     }));
-    return send(res, 200, { ok: true, devices: list, enrollmentCodes: data.enrollmentCodes.map(e => ({ code: e.code, group: (data.groups.find(g => g.id === e.groupId) || {}).name })) });
+    return send(res, 200, { ok: true, devices: list, enrollmentCodes: codes.map(e => ({ code: e.code, group: groupName(e.groupId) })) });
   }
 
   // GET /api/requests
   if (method === 'GET' && seg[0] === 'requests' && !seg[1]) {
-    const list = [...data.requests].sort((a, b) => b.createdAt - a.createdAt).map(r => ({
-      ...r, group: (data.groups.find(g => g.id === r.groupId) || {}).name
-    }));
+    const [requests, groups] = await Promise.all([store.listRequests(orgId), store.listGroups(orgId)]);
+    const groupName = id => (groups.find(g => g.id === id) || {}).name;
+    const list = [...requests].sort((a, b) => b.createdAt - a.createdAt).map(r => ({ ...r, group: groupName(r.groupId) }));
     return send(res, 200, { ok: true, requests: list });
   }
 
   // POST /api/requests/:id/decision {decision, grantedMin}
   if (method === 'POST' && seg[0] === 'requests' && seg[2] === 'decision') {
     const body = await readBody(req);
-    const r = data.requests.find(x => x.id === seg[1]);
+    const r = await store.getRequest(orgId, seg[1]);
     if (!r) return send(res, 404, { ok: false, error: 'no request' });
     if (r.status !== 'pending') return send(res, 400, { ok: false, error: 'already decided' });
     r.decidedAt = Date.now();
@@ -301,18 +294,18 @@ async function api(req, res, pathname) {
     } else {
       r.status = 'denied';
     }
-    db.save();
+    await store.saveRequest(orgId, r);
     return send(res, 200, { ok: true, request: r });
   }
 
   // GET /api/reports
   if (method === 'GET' && seg[0] === 'reports') {
     const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
-    const blocked = data.events.filter(e => e.type === 'blocked' && e.ts >= weekAgo);
-    const byDomain = {};
-    for (const e of blocked) byDomain[e.domain] = (byDomain[e.domain] || 0) + 1;
-    const top = Object.entries(byDomain).map(([domain, count]) => ({ domain, count })).sort((a, b) => b.count - a.count).slice(0, 12);
-    return send(res, 200, { ok: true, totalBlocked: blocked.length, top });
+    const [totalBlocked, top] = await Promise.all([
+      store.countBlockedSince(orgId, weekAgo),
+      store.topBlockedDomains(orgId, weekAgo, 12)
+    ]);
+    return send(res, 200, { ok: true, totalBlocked, top });
   }
 
   return send(res, 404, { ok: false, error: 'unknown api route' });
@@ -339,8 +332,16 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log('Deadbolt server running:');
-  console.log('  Admin console:  http://localhost:' + PORT + '/console/   (admin@northshore.example / deadbolt)');
-  console.log('  Device client:  http://localhost:' + PORT + '/device/     (enrollment code NSD-4K9-QX2)');
+const { seed } = require('./store');
+store.init(seed).then(() => {
+  server.listen(PORT, () => {
+    console.log(`Deadbolt server running (store: ${(process.env.STORE || 'json')}):`);
+    console.log('  Admin console:  http://localhost:' + PORT + '/console/');
+    console.log('    Northshore Dental  admin@northshore.example / deadbolt   (codes NSD-4K9-QX2, NSD-7P3-ZW8)');
+    console.log('    Cape Call Centre   admin@capecall.example   / deadbolt   (code  CCC-2M8-RT5)');
+    console.log('  Device client:  http://localhost:' + PORT + '/device/');
+  });
+}).catch(err => {
+  console.error('Failed to start:', err.message);
+  process.exit(1);
 });

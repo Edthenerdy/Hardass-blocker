@@ -6,9 +6,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:pg": "STORE=pg node server.js",
+    "schema": "psql \"$DATABASE_URL\" -f store/schema.sql",
     "reset": "node -e \"require('fs').rmSync('./data.json',{force:true});console.log('data reset')\""
   },
   "engines": {
     "node": ">=20"
+  },
+  "optionalDependencies": {
+    "pg": "^8.11.0"
   }
 }

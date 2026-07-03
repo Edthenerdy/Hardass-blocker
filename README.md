@@ -72,6 +72,8 @@ Then open two tabs:
 - **Admin console** — <http://localhost:8787/console/> — sign in with `admin@northshore.example` / `deadbolt`
 - **Device client** — <http://localhost:8787/device/> — enrol with code `NSD-4K9-QX2`
 
+> The backend is now **multi-tenant**. A second org, **Cape Call Centre**, is seeded alongside Northshore (`admin@capecall.example` / `deadbolt`, enrolment code `CCC-2M8-RT5`) so you can prove tenant isolation — a Northshore admin never sees Cape's devices, requests, or reports, and vice versa.
+
 ### The end-to-end loop to try
 
 1. In the **device** tab, type `instagram.com` and hit Go → you're **blocked** (policy synced from the server, enforced client-side).
@@ -107,9 +109,15 @@ Leaving a team is blocked while the policy is `locked` — exactly the "can't ta
 
 ### Enterprise backend notes
 
-- Zero npm dependencies — plain Node `http`, `crypto` (scrypt password hashing), JSON-file store (`server/data.json`, gitignored, seeded on first run).
-- Token auth: admin tokens and per-device tokens. Device endpoints are device-scoped; admin endpoints require an admin token (unauthorized calls 401).
-- This is a POC: single-tenant seed data, file storage, no HTTPS/SSO/billing yet. Production needs a real DB, multi-tenancy, SSO, Stripe, and the managed *browser extension* (not just the web simulator) as the enforcement agent.
+- Zero npm dependencies by default — plain Node `http`, `crypto` (scrypt password hashing).
+- **Swappable storage** behind one async contract (`server/store/`): every handler awaits the store instead of touching a global blob, so the engine is selected by env var with no handler changes.
+  - `STORE=json` (default) — in-memory blob flushed to `server/data.json` (gitignored, seeded on first run). Fine for the POC; not for production.
+  - `STORE=pg` — Postgres adapter (`server/store/pg-store.js`) with a real DDL schema (`server/store/schema.sql`). Needs `npm install pg` and `DATABASE_URL`; `PgStore.init()` applies the schema and seeds an empty database. *(Written to mirror the JSON store faithfully; not exercised by the zero-dep POC — treat as reviewed-not-run until pointed at a live database.)*
+- **Multi-tenant**: every entity is keyed by `orgId`, resolved from the auth token on each request; the two global lookups (admin login by email, device enrolment by code) resolve which tenant you land in. Two orgs are seeded to make isolation testable.
+- Token auth: admin tokens and per-device tokens, each carrying their `orgId`. Device endpoints are device-scoped; admin endpoints require an admin token (unauthorized calls 401; cross-tenant reads/writes 404).
+- Still a POC: file storage by default, no HTTPS/SSO/billing yet. Production still needs hosting + a live Postgres, SSO, Stripe, and the managed *browser extension* (already wired) as the enforcement agent — but the DB abstraction and multi-tenancy those depend on are now in place.
+
+The store contract is documented at the top of [`server/store/index.js`](server/store/index.js) — implement it once and any datastore drops in.
 
 ## Architecture (individual extension POC)
 
@@ -130,7 +138,7 @@ Leaving a team is blocked while the policy is `locked` — exactly the "can't ta
 - [x] Circumvention-resistance layers 1–2: bypass-vector blocking (proxies/translate/cache/archive), self-healing watchdog, pinned extension ID, and Chrome/Edge **force-install** policy so the user can't disable/remove it or use incognito. See [`docs/MOAT.md`](docs/MOAT.md) + [`enterprise-policy/`](enterprise-policy/).
 - [ ] Circumvention-resistance layer 3: native OS agent (DNS/hosts/other-browser/uninstall resistance). *(needs: native builds, code-signing, admin testing)*
 - [ ] Cross-browser (Firefox) build target.
-- [ ] Production backend: real DB + multi-tenancy, SSO, Stripe billing, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
+- [~] Production backend scaffolding: swappable store abstraction, **multi-tenancy** (org-scoped everywhere), and a **Postgres adapter + schema** ready to drop into hosting. *(done: `server/store/`. Still needs: live DB hosting, SSO, Stripe billing, HTTPS — each gated on external accounts.)*
 
 ---
 
