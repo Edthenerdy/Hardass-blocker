@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Hardass Blocker",
+  "version": "0.1.0",
+  "description": "The blocker you can't talk your way out of. Blocked sites stay blocked — lifting a block means waiting out a cooldown and facing your own history.",
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "alarms",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Hardass Blocker"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

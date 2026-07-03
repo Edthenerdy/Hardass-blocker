@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>Hardass Blocker</title>
+</head>
+<body>
+  <header class="head">
+    <svg viewBox="0 0 120 120" width="26" height="26" aria-hidden="true">
+      <rect x="20" y="20" width="80" height="80" rx="20" fill="#FF3B30" />
+      <rect x="34" y="54" width="54" height="12" rx="6" fill="#0E0E10" />
+      <circle cx="44" cy="60" r="12" fill="#0E0E10" />
+    </svg>
+    <div class="brand">
+      <strong>Hardass Blocker</strong>
+      <span>The blocker you can't talk your way out of.</span>
+    </div>
+  </header>
+
+  <div class="add">
+    <input id="siteInput" type="text" placeholder="instagram.com" autocomplete="off" spellcheck="false" />
+    <button id="addBtn">Block</button>
+  </div>
+  <p id="addHint" class="hint"></p>
+
+  <div class="listHead">
+    <span>Blocked sites</span>
+    <span id="count">0</span>
+  </div>
+  <ul id="list" class="list"></ul>
+  <p id="empty" class="empty" hidden>Nothing blocked yet. Add a site above.</p>
+
+  <button id="optionsBtn" class="ghost">Settings &amp; history</button>
+
+  <script src="common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
