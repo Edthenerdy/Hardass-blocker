@@ -13,7 +13,12 @@
 html, body {
   margin: 0;
   height: 100%;
-  background: var(--ink);
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(rgba(124, 129, 136, 0.20) 1px, transparent 1.6px),
+    radial-gradient(rgba(154, 156, 163, 0.13) 1px, transparent 1.6px);
+  background-size: 13px 13px, 21px 21px;
+  background-position: 0 0, 7px 11px;
   color: var(--bone);
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }

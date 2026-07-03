@@ -3,6 +3,7 @@
   "name": "Hardass Blocker",
   "version": "0.1.0",
   "description": "The blocker you can't talk your way out of. Blocked sites stay blocked — lifting a block means waiting out a cooldown and facing your own history.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApCgXdbSM9Y7Go1fM30ZX6WRno9PZ3yMnC2/f2rHZWJPLTZznV4HDtNnxmdRftDXfk3lYGgPfYQzA9FUH470cxJP3RSrNgolKMc1Ac+zIfQlTf/8NzcNTzaOlg8wo32etfgR0HtE+RrFUd7GIR8wxNYO6pERh5384uf7jHhc5/jEiN+IBPRZp/8xSWBkk0akkVwVF8DiQ676gmP/Y00PsrCzYfj8LKT0OBLDM0+MUW3YYG6imoi+nDELZAHkYkD5TRsf1A2zPBkJ6wTC703x0bJnBw2QqSWx4IZAqvbnMItjvsm871yQERcmOWR7djiivcfK9v58RC1RAdOznUhC/fwIDAQAB",
   "permissions": [
     "declarativeNetRequest",
     "storage",

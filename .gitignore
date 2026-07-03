@@ -17,3 +17,6 @@ dist/
 
 # Server runtime state (seeded on first run)
 server/data.json
+
+# Extension signing key (never commit private keys)
+.keys/

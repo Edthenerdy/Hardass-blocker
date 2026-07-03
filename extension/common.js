@@ -3,7 +3,8 @@ const HB = {
     settings: {
       cooldownMinutes: 20,
       allowanceMinutes: 10,
-      minReasonChars: 15
+      minReasonChars: 15,
+      blockBypass: true
     },
     blocklist: [],
     allowances: {},
@@ -16,6 +17,27 @@ const HB = {
   isManaged(state) {
     return !!(state && state.team && state.team.deviceToken);
   },
+
+  // Common ways people reach a blocked site without visiting it directly:
+  // translation proxies, cached copies, archive mirrors, and public web proxies.
+  // These are always blocked alongside the real blocklist so the block holds.
+  BYPASS_DOMAINS: [
+    'translate.goog',
+    'translate.google.com',
+    'webcache.googleusercontent.com',
+    'web.archive.org',
+    'archive.ph',
+    'archive.today',
+    'archive.is',
+    '12ft.io',
+    '1ft.io',
+    'croxyproxy.com',
+    'croxy.network',
+    'proxysite.com',
+    'proxyium.com',
+    'blockaway.net',
+    'hide.me'
+  ],
 
   async get() {
     const stored = await chrome.storage.local.get(null);

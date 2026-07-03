@@ -233,8 +233,17 @@
     });
   }
 
+  function initBypass() {
+    el.headline.textContent = 'Nice try.';
+    el.sub.textContent = 'Proxies, translators, cache and archive tricks are blocked too. There is no side door.';
+    el.timer.style.display = 'none';
+    el.timerCap.textContent = 'This is how you keep a block a block.';
+    el.stats.hidden = true;
+  }
+
   /* ================= boot ================= */
   (async () => {
+    if (params.get('x') === '1') return initBypass();
     const state = await HB.get();
     if (HB.isManaged(state)) return initManaged(state);
     return initIndividual(state);

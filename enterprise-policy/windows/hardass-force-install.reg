@@ -1,0 +1,27 @@
+Windows Registry Editor Version 5.00
+
+; ===================================================================
+; Deadbolt / Hardass Blocker — force-install policy for Google Chrome
+; Makes the extension UNREMOVABLE and UN-DISABLEABLE by the end user.
+; Deploy via GPO, Intune, or a login script (right-click > Merge).
+; Extension ID: mdfcmhkfkelkdhjbjddmkmjkmobijbgc
+; ===================================================================
+
+; Force-install the extension. Force-installed extensions cannot be
+; turned off or removed from chrome://extensions by the user.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist]
+"1"="mdfcmhkfkelkdhjbjddmkmjkmobijbgc;https://clients2.google.com/service/update2/crx"
+
+; Close the incognito side-door (a blocked extension does not run there by
+; default, so incognito would otherwise bypass the block). 1 = incognito off.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"IncognitoModeAvailability"=dword:00000001
+
+; Prevent the user disabling Developer mode extensions / side-loading around it.
+"ExtensionDeveloperModeSettings"=dword:00000000
+
+; --- For Microsoft Edge, use the same values under this key instead: ---
+; [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist]
+; "1"="mdfcmhkfkelkdhjbjddmkmjkmobijbgc;https://edge.microsoft.com/extensionwebstorebase/v1/crx"
+; [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+; "IncognitoModeAvailability"=dword:00000001

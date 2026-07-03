@@ -3,6 +3,7 @@
     cooldown: document.getElementById('cooldown'),
     allowance: document.getElementById('allowance'),
     reasonChars: document.getElementById('reasonChars'),
+    bypass: document.getElementById('reasonBypass'),
     saveBtn: document.getElementById('saveBtn'),
     saveMsg: document.getElementById('saveMsg'),
     logTable: document.getElementById('logTable'),
@@ -83,6 +84,7 @@
     el.cooldown.value = state.settings.cooldownMinutes;
     el.allowance.value = state.settings.allowanceMinutes;
     el.reasonChars.value = state.settings.minReasonChars;
+    el.bypass.checked = state.settings.blockBypass !== false;
 
     const log = [...state.relapseLog].sort((a, b) => b.ts - a.ts);
     el.logBody.innerHTML = '';
@@ -113,12 +115,14 @@
     const settings = {
       cooldownMinutes: clampInt(el.cooldown, 1, 180, 20),
       allowanceMinutes: clampInt(el.allowance, 1, 120, 10),
-      minReasonChars: clampInt(el.reasonChars, 0, 200, 15)
+      minReasonChars: clampInt(el.reasonChars, 0, 200, 15),
+      blockBypass: !!el.bypass.checked
     };
     el.cooldown.value = settings.cooldownMinutes;
     el.allowance.value = settings.allowanceMinutes;
     el.reasonChars.value = settings.minReasonChars;
     await HB.set({ settings: { ...state.settings, ...settings } });
+    await chrome.runtime.sendMessage({ type: 'applyRules' });
     el.saveMsg.textContent = 'Saved.';
     setTimeout(() => { el.saveMsg.textContent = ''; }, 1800);
   });

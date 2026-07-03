@@ -43,16 +43,20 @@ Every other blocker is polite. It asks nicely, then folds the moment you push ba
 
 ---
 
-## 4. Logo concept
+## 4. Logo — a two-mark system
 
-**Primary mark:** a **deadbolt** rendered as a bold, geometric glyph — a thick rounded square (the bolt housing) with a horizontal bar thrown across it. It reads as "locked, deliberately," works at favicon size, and quietly seeds the B2B "Deadbolt" name.
+The name is literally *hard as a rock*, so the consumer brand gets a mascot; the B2B brand keeps the serious glyph. Two marks, one family, same Redline tile.
+
+**Consumer — "Rocky", the hardass rock.** A cute-but-tough granite pebble with a stern brow and a flat, determined mouth, sitting on the Redline tile. Grumpy, not angry; on your side, but immovable. This is the face of **Hardass Blocker** — memorable, sticker-able, and it makes "the block that won't budge" adorable instead of hostile. Speckle texture on the stone ties to the granite texture (§7a).
+
+**B2B — the deadbolt.** The original geometric glyph — a rounded housing with a bar thrown across it — stays as the mark for **Deadbolt for Teams**. Serious, procurement-friendly, "locked, deliberately."
 
 **Wordmark:** `HARDASS` in a heavy grotesque, tight tracking, all caps; `BLOCKER` lighter/smaller beneath or trailing. The weight contrast *is* the attitude.
 
-**Do:** use the bolt solid, one accent colour on dark. Keep clear space = height of the bolt bar.
-**Don't:** add gradients, soften the corners into a "friendly" blob, or outline the wordmark.
+**Do:** keep the mascot on the Redline tile; keep the face simple enough to read at 16px. Use the deadbolt for anything B2B.
+**Don't:** make Rocky *smile* (he's stoic, not cheerful), add gradients, or outline the wordmark.
 
-*(See the rendered brand board artifact for the visual.)*
+*(See the rendered brand board for both marks.)*
 
 ---
 
@@ -70,6 +74,17 @@ The palette is **near-black + one hot accent**. Restraint reads as seriousness; 
 | **Accent** | **Redline** | **`#FF3B30`** | The block, the bar, the "no" |
 | Signal | Amber | `#FFB800` | Cooldown timer, warnings |
 | Success | Clear | `#37D67A` | Rare — "you held the line" |
+| Stone | Granite | `#A7ABB2` | Rocky's body, texture base |
+| Stone dark | Basalt | `#7C8188` | Rock speckle, texture flecks |
+
+### 7a. Texture — granite
+
+The brand has one texture: **granite speckle**. It's the visual echo of "hard as rock" and it's what stops the near-black palette feeling like every other dark SaaS.
+
+- **What it is:** a near-black (Ink) base scattered with faint Basalt/Ash flecks — like polished stone. Subtle, never loud; you should feel it before you notice it.
+- **Where it goes:** hero surfaces (the blocked page background, landing hero, brand boards). Not behind body text or forms — legibility first.
+- **How to build it:** layered sparse dots (small `radial-gradient` speckles or a tiled SVG of tiny circles at ~4–8% opacity in Basalt/Ash over Ink). Flat, matte — no glossy or 3D rock. Keep contrast low so text stays readable on top.
+- **Don't:** photographic rock textures, bevels, drop shadows, or anything that reads "stock granite countertop." Matte speckle only.
 
 Accent is used *sparingly* — it's the stop sign, not the wallpaper.
 

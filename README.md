@@ -13,7 +13,9 @@ This repo contains the concept, the brand, and a working proof-of-concept.
 | Path | What it is |
 |---|---|
 | [`docs/BUSINESS-PLAN.md`](docs/BUSINESS-PLAN.md) | Strategy, market analysis, competitive map, pricing, GTM, risks |
-| [`docs/BRAND.md`](docs/BRAND.md) | Brand guide — voice, logo, palette, typography |
+| [`docs/BRAND.md`](docs/BRAND.md) | Brand guide — voice, two-mark logo system (Rocky + deadbolt), palette, granite texture |
+| [`docs/MOAT.md`](docs/MOAT.md) | Circumvention-resistance strategy — the layered defense and its honest limits |
+| [`enterprise-policy/`](enterprise-policy/) | Chrome/Edge force-install policy — makes the extension unremovable without MDM |
 | [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Hardass" product) |
 | [`server/`](server/) | Enterprise POC backend — Node.js API (auth, policy sync, approvals, telemetry) |
 | [`console/`](console/) | Enterprise POC — the admin console (Deadbolt for Teams) |
@@ -125,8 +127,9 @@ Leaving a team is blocked while the policy is `locked` — exactly the "can't ta
 - [x] SME tier POC: central admin console, admin-enforced blocklists, admin-approved unblocks, non-MDM enrolment, compliance reporting *(see `server/` + `console/` + `device/`)*.
 - [x] Wire the *real* extension into managed mode — enrol → pull policy from the server → sync every 30s → lock down add/remove/disable → server-backed request/approval + cooldown + telemetry.
 - [x] Gate blocklist *removal* behind a think-delay in the individual extension (managed+locked disables it entirely).
-- [ ] Cross-browser (Firefox/Edge) + native desktop agent — the more defensible surface. *(needs: build targets)*
-- [ ] Real circumvention-resistance (uninstall prevention, DNS, other-browser, safe mode). *(the hard, ongoing engineering)*
+- [x] Circumvention-resistance layers 1–2: bypass-vector blocking (proxies/translate/cache/archive), self-healing watchdog, pinned extension ID, and Chrome/Edge **force-install** policy so the user can't disable/remove it or use incognito. See [`docs/MOAT.md`](docs/MOAT.md) + [`enterprise-policy/`](enterprise-policy/).
+- [ ] Circumvention-resistance layer 3: native OS agent (DNS/hosts/other-browser/uninstall resistance). *(needs: native builds, code-signing, admin testing)*
+- [ ] Cross-browser (Firefox) build target.
 - [ ] Production backend: real DB + multi-tenancy, SSO, Stripe billing, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
 
 ---
