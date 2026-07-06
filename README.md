@@ -107,6 +107,17 @@ Now the extension:
 
 Leaving a team is blocked while the policy is `locked` — exactly the "can't talk your way out of it" promise, enforced by the org instead of a timer.
 
+### Automated Chrome integration test
+
+The managed-mode loop above is covered by an end-to-end test that loads the **real** unpacked extension into a headless Chromium (Playwright) and drives it against a freshly-seeded multi-tenant server — no hand-clicking. It asserts enrolment, policy pull, lockdown (add/remove/leave refused), a **live** navigation to a blocked site redirecting to the block page, the request→admin-approve→sync→unblock loop, cooldown self-grant, and telemetry landing in the correct tenant's reports.
+
+```bash
+cd tools && npm install        # installs Playwright
+npm run test:chrome            # spins up the server + browser, runs 21 assertions
+```
+
+*(In the managed web environment Playwright is already present — run `NODE_PATH=$(npm root -g) node tools/chrome-integration-test.js`.)*
+
 ### Enterprise backend notes
 
 - Zero npm dependencies by default — plain Node `http`, `crypto` (scrypt password hashing).
