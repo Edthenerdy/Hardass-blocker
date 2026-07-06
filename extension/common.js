@@ -1,3 +1,10 @@
+// Cross-browser shim: Firefox exposes the promise-based `browser` namespace;
+// aliasing `chrome` to it lets this Chrome-first codebase (which awaits chrome.*
+// calls) run unchanged on Firefox. No-op on Chrome, where `browser` is undefined.
+if (typeof globalThis.browser !== 'undefined' && globalThis.browser !== globalThis.chrome) {
+  globalThis.chrome = globalThis.browser;
+}
+
 const HB = {
   DEFAULTS: {
     settings: {

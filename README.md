@@ -118,6 +118,16 @@ npm run test:chrome            # spins up the server + browser, runs 21 assertio
 
 *(In the managed web environment Playwright is already present — run `NODE_PATH=$(npm root -g) node tools/chrome-integration-test.js`.)*
 
+### Firefox build
+
+`extension/` is the single source of truth for both browsers. Two small guards keep it portable — `common.js` aliases `chrome`→`browser` (promise APIs) on Firefox, and `background.js` only calls `importScripts()` where it exists (Chrome's service worker) — so only the manifest needs transforming:
+
+```bash
+node tools/build-firefox.js     # → dist/firefox/
+```
+
+The build drops Chrome's `key`, adds `browser_specific_settings.gecko`, and swaps the service-worker background for Firefox's `background.scripts`. Load it via `about:debugging` → **Load Temporary Add-on** → `dist/firefox/manifest.json`. *(Built and statically validated; Firefox's DNR redirect-to-extension behaviour still needs a smoke test on a real Firefox — this environment only ships Chromium.)*
+
 ### Enterprise backend notes
 
 - Zero npm dependencies by default — plain Node `http`, `crypto` (scrypt password hashing).
@@ -148,7 +158,7 @@ The store contract is documented at the top of [`server/store/index.js`](server/
 - [x] Gate blocklist *removal* behind a think-delay in the individual extension (managed+locked disables it entirely).
 - [x] Circumvention-resistance layers 1–2: bypass-vector blocking (proxies/translate/cache/archive), self-healing watchdog, pinned extension ID, and Chrome/Edge **force-install** policy so the user can't disable/remove it or use incognito. See [`docs/MOAT.md`](docs/MOAT.md) + [`enterprise-policy/`](enterprise-policy/).
 - [ ] Circumvention-resistance layer 3: native OS agent (DNS/hosts/other-browser/uninstall resistance). *(needs: native builds, code-signing, admin testing)*
-- [ ] Cross-browser (Firefox) build target.
+- [~] Cross-browser (Firefox) build target: shared source runs on both via two guards (`chrome`→`browser` alias, importScripts guard); `node tools/build-firefox.js` emits a Firefox MV3 build in `dist/firefox/`. *(Built + statically validated; the one thing left is confirming Firefox's DNR redirect-to-extension behaviour on a real Firefox — none in this environment.)*
 - [~] Production backend scaffolding: swappable store abstraction, **multi-tenancy** (org-scoped everywhere), and a **Postgres adapter + schema** ready to drop into hosting. *(done: `server/store/`. Still needs: live DB hosting, SSO, Stripe billing, HTTPS — each gated on external accounts.)*
 
 ---

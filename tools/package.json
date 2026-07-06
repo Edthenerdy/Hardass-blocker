@@ -5,6 +5,7 @@
   "description": "Dev tooling for Hardass Blocker — icon generation and the Chrome↔backend integration test",
   "scripts": {
     "test:chrome": "node chrome-integration-test.js",
+    "build:firefox": "node build-firefox.js",
     "icons": "node gen-icons.js"
   },
   "devDependencies": {

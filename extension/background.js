@@ -1,4 +1,7 @@
-importScripts('common.js');
+// Chrome loads common.js into the service worker via importScripts; Firefox has
+// no importScripts in its background event page, so it loads common.js first via
+// the manifest's background.scripts array instead (see tools/build-firefox.js).
+if (typeof importScripts === 'function') importScripts('common.js');
 
 const REBLOCK_PREFIX = 'reblock:';
 const SYNC_ALARM = 'syncManaged';
