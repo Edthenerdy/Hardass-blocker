@@ -35,7 +35,15 @@ catch { console.error("This test needs Playwright. Install it: `npm install play
 const REPO = path.resolve(__dirname, '..');
 const EXT = path.join(REPO, 'extension');
 const SERVER = path.join(REPO, 'server', 'server.js');
-const CHROME = process.env.CHROME_BIN || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+// Prefer an explicit CHROME_BIN, then this managed env's bundled Chromium, and
+// otherwise fall back to Playwright's own download (the normal-machine path).
+function resolveChrome() {
+  if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
+  const managed = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+  if (fs.existsSync(managed)) return managed;
+  return undefined; // let Playwright use the Chromium it installed
+}
+const CHROME = resolveChrome();
 const PORT = 8899;
 const BASE = `http://localhost:${PORT}`;
 
