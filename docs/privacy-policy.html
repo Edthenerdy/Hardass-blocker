@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hardass Blocker — Privacy Policy</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 720px; margin: 0 auto; padding: 40px 24px 96px; color: #1a1a1a;
+    }
+    @media (prefers-color-scheme: dark) { body { color: #e6e6e6; background: #111; } }
+    h1 { font-size: 1.9rem; margin-bottom: 0.2em; }
+    h2 { font-size: 1.25rem; margin-top: 2em; }
+    .updated { color: #888; font-size: 0.9rem; margin-top: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+    @media (prefers-color-scheme: dark) { th, td { border-color: #444; } }
+    code { background: rgba(127,127,127,0.15); padding: 1px 5px; border-radius: 4px; }
+    footer { margin-top: 3em; font-size: 0.85rem; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>Hardass Blocker — Privacy Policy</h1>
+  <p class="updated">Last updated: 9 July 2026</p>
+
+  <p>
+    Hardass Blocker is a website blocker. This policy explains, in plain language,
+    exactly what data the extension handles and where it goes. The short version:
+    <strong>in personal use, all of your data stays on your own device and nothing is
+    transmitted to us or to any third party.</strong>
+  </p>
+
+  <h2>1. What the extension stores</h2>
+  <p>
+    Hardass Blocker keeps a small amount of data in your browser's local storage
+    (<code>chrome.storage.local</code>) so it can do its job:
+  </p>
+  <table>
+    <tr><th>Data</th><th>Purpose</th></tr>
+    <tr><td>Your blocklist (the domains you choose to block)</td><td>To know which sites to block.</td></tr>
+    <tr><td>Your settings (cooldown length, allowance length, etc.)</td><td>To apply the rules you configured.</td></tr>
+    <tr><td>Cooldown timers and temporary allowances</td><td>To enforce the waiting period before a block can be lifted.</td></tr>
+    <tr><td>Your relapse log — timestamps and the short reasons you type when unblocking a site</td><td>To show you your own history so you can reflect on it. This is shown only to you.</td></tr>
+  </table>
+  <p>
+    This data lives on your device. In personal (unmanaged) use it is never sent to us,
+    and we do not operate any server that receives it. We have no accounts, no analytics,
+    no advertising, and no tracking.
+  </p>
+
+  <h2>2. What the extension does <em>not</em> do</h2>
+  <ul>
+    <li>It does <strong>not</strong> read, collect, or transmit the content of the pages you visit.</li>
+    <li>It does <strong>not</strong> track or log your general browsing history.</li>
+    <li>It does <strong>not</strong> sell, rent, or share any data with third parties.</li>
+    <li>It does <strong>not</strong> use your data for advertising, profiling, or any purpose unrelated to blocking.</li>
+  </ul>
+  <p>
+    The extension requests access to all sites only so its blocking rules can redirect a
+    blocked page to its own "blocked" screen. It inspects only the address of the page you
+    are navigating to, and only to decide whether that address is on your blocklist. It
+    does not open, read, or store the contents of any page.
+  </p>
+
+  <h2>3. Managed (team / enterprise) mode</h2>
+  <p>
+    Hardass Blocker can optionally be enrolled into a <strong>managed mode</strong> by an
+    organisation (for example, an employer or a program you have joined). This only happens
+    if you or your administrator explicitly enrol the extension against a server address
+    that your organisation controls.
+  </p>
+  <p>When enrolled in managed mode, the extension communicates with <em>that organisation's own server</em> — not with us — to:</p>
+  <ul>
+    <li>fetch the blocking policy set by your administrator;</li>
+    <li>send access requests you submit (the domain and the reason you provide); and</li>
+    <li>send basic enforcement events (for example, that a blocked domain was accessed or allowed).</li>
+  </ul>
+  <p>
+    In managed mode, how that data is used and retained is governed by the enrolling
+    organisation's own privacy policy. Hardass Blocker acts only as the software that
+    connects your browser to the server your organisation runs. If you are not part of a
+    managed deployment, none of this applies to you and no data leaves your device.
+  </p>
+
+  <h2>4. Data retention and deletion</h2>
+  <p>
+    Because personal-mode data is stored locally, you are in full control of it. Removing a
+    blocked site clears its associated timers and allowances. Uninstalling the extension
+    permanently deletes all locally stored data. To leave managed mode, use the extension's
+    options page (subject to any lock your administrator has set).
+  </p>
+
+  <h2>5. Permissions</h2>
+  <p>The extension requests only the permissions it needs to block sites:</p>
+  <table>
+    <tr><th>Permission</th><th>Why</th></tr>
+    <tr><td><code>declarativeNetRequest</code></td><td>To block and redirect requests to sites on your blocklist. This runs on rules; it does not report your browsing to the extension or to us.</td></tr>
+    <tr><td><code>storage</code></td><td>To save your blocklist, settings, and history locally on your device.</td></tr>
+    <tr><td><code>alarms</code></td><td>To run cooldown/allowance timers and to periodically re-check that your blocking rules are still in place.</td></tr>
+    <tr><td>Host access (<code>&lt;all_urls&gt;</code>)</td><td>So blocking rules can apply to any site you choose to block. The extension does not read page content.</td></tr>
+  </table>
+
+  <h2>6. Children</h2>
+  <p>Hardass Blocker is a general-purpose productivity tool and is not directed at children.</p>
+
+  <h2>7. Changes to this policy</h2>
+  <p>
+    If this policy changes, we will update the date at the top of this page. Material
+    changes will be reflected in the extension's store listing.
+  </p>
+
+  <h2>8. Contact</h2>
+  <p>Questions about this policy? Email <a href="mailto:edward@hadrongroup.com.au">edward@hadrongroup.com.au</a>.</p>
+
+  <footer>Hardass Blocker is a product of Hadron Group.</footer>
+</body>
+</html>
