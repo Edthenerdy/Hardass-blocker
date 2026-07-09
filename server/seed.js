@@ -4,7 +4,12 @@ const { hashPassword } = require('./auth');
 module.exports = function seed() {
   const { salt, hash } = hashPassword('deadbolt');
   return {
-    org: { id: 'org1', name: 'Northshore Dental', seats: 14 },
+    org: {
+      id: 'org1', name: 'Northshore Dental', seats: 14,
+      plan: 'team_monthly', subscriptionStatus: 'active', currentPeriodEnd: Date.now() + 365 * 24 * 3600 * 1000
+    },
+    users: [],
+    checkouts: [],
     admins: [
       { id: 'a1', email: 'admin@northshore.example', name: 'Ed Chan', salt, hash }
     ],

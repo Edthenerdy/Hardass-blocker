@@ -132,6 +132,74 @@
     load();
   });
 
+  /* ---------- account (Hardass Pro) ---------- */
+  const acct = {
+    signedOut: document.getElementById('acctSignedOut'),
+    signedIn: document.getElementById('acctSignedIn'),
+    server: document.getElementById('acctServer'),
+    email: document.getElementById('acctEmail'),
+    pass: document.getElementById('acctPass'),
+    signup: document.getElementById('acctSignup'),
+    login: document.getElementById('acctLogin'),
+    msg: document.getElementById('acctMsg'),
+    info: document.getElementById('acctInfo'),
+    upgrade: document.getElementById('acctUpgrade'),
+    refresh: document.getElementById('acctRefresh'),
+    signout: document.getElementById('acctSignout'),
+    msg2: document.getElementById('acctMsg2')
+  };
+
+  async function acctApi(server, path, opts, tok) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'Content-Type': 'application/json' }, tok ? { 'Authorization': 'Bearer ' + tok } : {}, opts.headers || {});
+    const res = await fetch(server.replace(/\/+$/, '') + path, opts);
+    return res.json();
+  }
+
+  async function loadAccount() {
+    const state = await HB.get();
+    const a = state.account;
+    const signed = !!(a && a.userToken);
+    acct.signedOut.hidden = signed;
+    acct.signedIn.hidden = !signed;
+    if (signed) {
+      const pro = a.plan === 'pro';
+      acct.info.innerHTML = 'Signed in as <strong style="color:var(--bone)">' + a.email + '</strong><br>Plan: ' +
+        '<strong style="color:' + (pro ? 'var(--clear)' : 'var(--bone)') + '">' + (pro ? 'Pro — unlimited' : 'Free — 5-site limit') + '</strong>';
+      acct.upgrade.hidden = pro;
+    }
+  }
+
+  async function acctAuth(kind) {
+    acct.msg.textContent = 'Working…';
+    const server = acct.server.value.trim();
+    const res = await acctApi(server, '/api/auth/user/' + kind, { method: 'POST', body: JSON.stringify({ email: acct.email.value.trim(), password: acct.pass.value }) });
+    if (!res.ok) { acct.msg.textContent = res.error || 'Failed'; return; }
+    await HB.set({ account: { serverUrl: server, userToken: res.token, email: acct.email.value.trim().toLowerCase(), plan: (res.status && res.status.plan) || 'free' } });
+    acct.pass.value = ''; acct.msg.textContent = '';
+    loadAccount();
+  }
+  acct.signup.addEventListener('click', () => acctAuth('signup'));
+  acct.login.addEventListener('click', () => acctAuth('login'));
+
+  acct.refresh.addEventListener('click', async () => {
+    const state = await HB.get(); const a = state.account; if (!a) return;
+    acct.msg2.textContent = 'Checking…';
+    const res = await acctApi(a.serverUrl, '/api/billing/status', { method: 'GET' }, a.userToken);
+    if (res.ok) { a.plan = res.plan; await HB.set({ account: a }); acct.msg2.textContent = 'Plan: ' + res.plan + '.'; setTimeout(() => { acct.msg2.textContent = ''; }, 1800); loadAccount(); }
+    else acct.msg2.textContent = 'Failed';
+  });
+
+  acct.upgrade.addEventListener('click', async () => {
+    const state = await HB.get(); const a = state.account; if (!a) return;
+    const res = await acctApi(a.serverUrl, '/api/billing/checkout', { method: 'POST', body: JSON.stringify({ plan: 'pro_monthly' }) }, a.userToken);
+    if (res.ok && res.url) window.open(res.url, '_blank');
+    else acct.msg2.textContent = res.error || 'Checkout failed';
+  });
+
+  acct.signout.addEventListener('click', async () => { await HB.set({ account: null }); loadAccount(); });
+
   load();
   loadTeam();
+  loadAccount();
 })();

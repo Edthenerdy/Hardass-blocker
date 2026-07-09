@@ -7,6 +7,7 @@ const url = require('node:url');
 const db = require('./db');
 const { hashPassword, verifyPassword, newToken, newId } = require('./auth');
 const CATEGORIES = require('./categories');
+const billing = require('./billing');
 
 const PORT = process.env.PORT || 8787;
 const ROOT = path.join(__dirname, '..');
@@ -40,9 +41,21 @@ function readBody(req) {
   });
 }
 
+function readRaw(req) {
+  return new Promise(resolve => {
+    let raw = '';
+    req.on('data', c => { raw += c; if (raw.length > 1e6) req.destroy(); });
+    req.on('end', () => resolve(raw));
+  });
+}
+
 function bearer(req) {
   const h = req.headers['authorization'] || '';
   return h.startsWith('Bearer ') ? h.slice(7) : null;
+}
+
+function originOf(req) {
+  return 'http://' + (req.headers.host || 'localhost:' + PORT);
 }
 
 function auth(req, kind) {
@@ -110,6 +123,43 @@ function serveStatic(res, baseDir, rel) {
   });
 }
 
+/* ---------------- simulated hosted checkout page ---------------- */
+
+function money(cents) { return '$' + (cents / 100).toFixed(2); }
+
+function payPage(req, res, pathname) {
+  const id = pathname.split('/')[2];
+  const cs = billing.getSimCheckout(id);
+  if (!cs) return send(res, 404, 'Unknown checkout');
+  const paid = cs.status === 'paid';
+  const seatLine = cs.kind === 'team' ? '<div class="row"><span>Seats</span><span>' + cs.seats + '</span></div>' : '';
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout — ${cs.label}</title><style>
+body{margin:0;background:#0E0E10;color:#F4F1EC;font-family:Inter,system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px}
+.card{background:#1B1C20;border:0.5px solid #33353B;border-radius:16px;padding:28px;width:360px}
+h1{font-size:18px;margin:0 0 4px}.muted{color:#9A9CA3;font-size:13px}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid #33353B;font-size:14px}
+.total{font-size:22px;font-weight:600;padding-top:12px;display:flex;justify-content:space-between}
+button{width:100%;margin-top:20px;background:#FF3B30;color:#fff;border:0;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.test{background:#412402;color:#FFB800;font-size:12px;border-radius:8px;padding:8px 10px;margin-bottom:16px;text-align:center}
+a{color:#9A9CA3;font-size:12px;display:block;text-align:center;margin-top:14px}
+</style></head><body><div class="card">
+<div class="test">Simulated checkout — no real card, no charge. Set STRIPE_SECRET_KEY for live Stripe.</div>
+<h1>${cs.label}</h1><p class="muted">Hardass / Deadbolt</p>
+<div class="row"><span>Plan</span><span>${cs.label}</span></div>${seatLine}
+<div class="total"><span>Total</span><span>${money(cs.amount)}${cs.kind === 'team' ? '/mo' : ''}</span></div>
+<button id="pay"${paid ? ' disabled' : ''}>${paid ? 'Paid ✓' : 'Pay ' + money(cs.amount) + ' (test)'}</button>
+<a href="/account">Cancel and go back</a>
+</div><script>
+document.getElementById('pay').addEventListener('click',async function(){
+  this.disabled=true;this.textContent='Processing…';
+  const r=await fetch('/api/pay/${id}/complete',{method:'POST'}).then(r=>r.json());
+  window.location.href = r.redirect || '/account?paid=1';
+});
+</script></body></html>`;
+  send(res, 200, html, { 'Content-Type': 'text/html' });
+}
+
 /* ---------------- API ---------------- */
 
 async function api(req, res, pathname) {
@@ -131,6 +181,102 @@ async function api(req, res, pathname) {
     return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org: data.org });
   }
 
+  // POST /api/auth/user/signup {email, password}  (consumer accounts)
+  if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'user' && seg[2] === 'signup') {
+    const body = await readBody(req);
+    const email = String(body.email || '').trim().toLowerCase();
+    if (!email || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'Email and a 6+ char password required' });
+    if (data.users.some(u => u.email === email)) return send(res, 409, { ok: false, error: 'Account already exists — sign in instead' });
+    const { salt, hash } = hashPassword(String(body.password));
+    const user = { id: newId('usr'), email, salt, hash, plan: 'free', proUntil: null, lifetime: false, createdAt: Date.now() };
+    data.users.push(user);
+    const token = newToken();
+    data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + TOKEN_TTL };
+    db.save();
+    return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user) });
+  }
+
+  // POST /api/auth/user/login {email, password}
+  if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'user' && seg[2] === 'login') {
+    const body = await readBody(req);
+    const email = String(body.email || '').trim().toLowerCase();
+    const user = data.users.find(u => u.email === email);
+    if (!user || !verifyPassword(String(body.password || ''), user.salt, user.hash)) return send(res, 401, { ok: false, error: 'Wrong email or password' });
+    const token = newToken();
+    data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + TOKEN_TTL };
+    db.save();
+    return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user) });
+  }
+
+  // POST /api/auth/org/signup {orgName, name, email, password}  (self-serve SME signup)
+  if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'org' && seg[2] === 'signup') {
+    const body = await readBody(req);
+    const email = String(body.email || '').trim().toLowerCase();
+    if (!email || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'Email and a 6+ char password required' });
+    if (data.admins.some(a => a.email.toLowerCase() === email)) return send(res, 409, { ok: false, error: 'Admin already exists — sign in instead' });
+    const { salt, hash } = hashPassword(String(body.password));
+    const admin = { id: newId('adm'), email, name: String(body.name || email), salt, hash };
+    data.admins.push(admin);
+    // Single-org POC: the new signup (re)claims the org and starts inactive until paid.
+    data.org.name = String(body.orgName || 'My organization').slice(0, 80);
+    data.org.subscriptionStatus = 'inactive';
+    data.org.seats = 0;
+    const token = newToken();
+    data.tokens[token] = { kind: 'admin', id: admin.id, expiresAt: Date.now() + TOKEN_TTL };
+    db.save();
+    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org: data.org });
+  }
+
+  // GET /api/plans  (public pricing)
+  if (method === 'GET' && seg[0] === 'plans') {
+    return send(res, 200, { ok: true, plans: billing.PLANS, stripe: billing.useStripe() });
+  }
+
+  // POST /api/pay/:id/complete  (simulated checkout confirmation)
+  if (method === 'POST' && seg[0] === 'pay' && seg[2] === 'complete') {
+    const r = billing.completeSimCheckout(seg[1]);
+    if (!r.ok) return send(res, 404, r);
+    const redirect = r.checkout.kind === 'team' ? '/console/?paid=1' : '/account?paid=1';
+    return send(res, 200, { ok: true, redirect });
+  }
+
+  // POST /api/stripe/webhook  (real Stripe — raw body + signature)
+  if (method === 'POST' && seg[0] === 'stripe' && seg[1] === 'webhook') {
+    const raw = await readRaw(req);
+    return send(res, 200, billing.handleStripeWebhook(raw, req.headers['stripe-signature']));
+  }
+
+  /* ----- billing (consumer user OR org admin) ----- */
+  if (seg[0] === 'billing') {
+    const userRec = auth(req, 'user');
+    const adminRec = auth(req, 'admin');
+    if (!userRec && !adminRec) return send(res, 401, { ok: false, error: 'unauthorized' });
+    const kind = userRec ? 'consumer' : 'team';
+
+    if (method === 'POST' && seg[1] === 'checkout') {
+      const body = await readBody(req);
+      const refId = userRec ? userRec.id : data.org.id;
+      try {
+        const out = await billing.createCheckout({ kind, refId, plan: body.plan, seats: body.seats, origin: originOf(req) });
+        return send(res, 200, { ok: true, ...out });
+      } catch (e) { return send(res, 400, { ok: false, error: String(e.message || e) }); }
+    }
+    if (method === 'GET' && seg[1] === 'status') {
+      if (userRec) {
+        const u = data.users.find(x => x.id === userRec.id);
+        return send(res, 200, { ok: true, kind, ...billing.consumerStatus(u) });
+      }
+      const o = data.org;
+      return send(res, 200, { ok: true, kind, status: o.subscriptionStatus, active: billing.orgActive(o), seats: o.seats, plan: o.plan, currentPeriodEnd: o.currentPeriodEnd });
+    }
+    if (method === 'POST' && seg[1] === 'cancel') {
+      if (userRec) billing.applyEntitlement('consumer', userRec.id, 'free', 1);
+      else { data.org.subscriptionStatus = 'canceled'; db.save(); }
+      return send(res, 200, { ok: true });
+    }
+    return send(res, 404, { ok: false, error: 'unknown billing route' });
+  }
+
   /* ----- device endpoints ----- */
 
   // POST /api/enroll {code, deviceName}
@@ -139,6 +285,7 @@ async function api(req, res, pathname) {
     const code = String(body.code || '').trim().toUpperCase();
     const entry = data.enrollmentCodes.find(e => e.code === code);
     if (!entry) return send(res, 400, { ok: false, error: 'Invalid enrollment code' });
+    if (!billing.orgActive(data.org)) return send(res, 402, { ok: false, error: 'This organization has no active subscription.' });
     const device = {
       id: newId('dev'),
       name: String(body.deviceName || 'Unnamed device').slice(0, 60),
@@ -241,7 +388,8 @@ async function api(req, res, pathname) {
       seats: data.org.seats,
       blocksToday,
       pendingRequests: pending,
-      coverage: data.org.seats ? Math.min(100, Math.round((data.devices.length / data.org.seats) * 100)) : 0
+      coverage: data.org.seats ? Math.min(100, Math.round((data.devices.length / data.org.seats) * 100)) : 0,
+      subscription: { status: data.org.subscriptionStatus, active: billing.orgActive(data.org), plan: data.org.plan, orgName: data.org.name }
     });
   }
 
@@ -327,11 +475,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (pathname === '/') { res.writeHead(302, { Location: '/console/' }); return res.end(); }
     if (pathname.startsWith('/api/')) return await api(req, res, pathname);
+    if (pathname.startsWith('/pay/')) return payPage(req, res, pathname);
     if (pathname === '/console' || pathname.startsWith('/console/')) {
       return serveStatic(res, path.join(ROOT, 'console'), pathname.replace(/^\/console\/?/, ''));
     }
     if (pathname === '/device' || pathname.startsWith('/device/')) {
       return serveStatic(res, path.join(ROOT, 'device'), pathname.replace(/^\/device\/?/, ''));
+    }
+    if (pathname === '/account' || pathname.startsWith('/account/')) {
+      return serveStatic(res, path.join(ROOT, 'account'), pathname.replace(/^\/account\/?/, ''));
     }
     return send(res, 404, 'not found');
   } catch (e) {
@@ -343,4 +495,6 @@ server.listen(PORT, () => {
   console.log('Deadbolt server running:');
   console.log('  Admin console:  http://localhost:' + PORT + '/console/   (admin@northshore.example / deadbolt)');
   console.log('  Device client:  http://localhost:' + PORT + '/device/     (enrollment code NSD-4K9-QX2)');
+  console.log('  Consumer app:   http://localhost:' + PORT + '/account/');
+  console.log('  Billing:        ' + (billing.useStripe() ? 'REAL Stripe (STRIPE_SECRET_KEY set)' : 'SIMULATED (set STRIPE_SECRET_KEY for live)'));
 });

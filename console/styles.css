@@ -28,6 +28,15 @@ body {
 .loginCard { background: var(--slate); border: 0.5px solid var(--steel); border-radius: 16px; padding: 30px; width: 340px; }
 .brandRow { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
 .loginCard h1 { font-family: "Archivo Black", "Arial Black", sans-serif; font-size: 20px; margin: 0 0 18px; }
+.authTabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.authTab { flex: 1; background: transparent; border: 0.5px solid var(--steel); color: var(--ash); border-radius: 8px; padding: 9px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.authTab.on { background: var(--ink); color: var(--bone); border-color: var(--amber); }
+.billMetric { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.billMetric .m { flex: 1; min-width: 120px; background: var(--ink); border-radius: 10px; padding: 12px; }
+.billMetric .m .k { color: var(--ash); font-size: 12px; }
+.billMetric .m .v { font-size: 20px; font-weight: 500; margin-top: 4px; }
+.pill.active { background: #10361f; color: var(--clear); }
+.pill.inactive { background: #4A1B0C; color: var(--redline); }
 .loginCard label { display: block; font-size: 13px; color: var(--ash); margin: 12px 0 6px; }
 
 input, select {

@@ -46,6 +46,29 @@
     </section>
 
     <section class="card">
+      <h2>Account (Hardass Pro)</h2>
+      <div id="acctSignedOut">
+        <p class="note">Free tier blocks up to 5 sites. Go Pro for unlimited. Create an account or sign in — your Pro status unlocks this extension.</p>
+        <div class="field">
+          <label for="acctServer">Server URL</label>
+          <input id="acctServer" type="text" value="http://localhost:8787" />
+        </div>
+        <div class="field"><label for="acctEmail">Email</label><input id="acctEmail" type="email" placeholder="you@email.com" /></div>
+        <div class="field"><label for="acctPass">Password</label><input id="acctPass" type="password" placeholder="6+ characters" /></div>
+        <button id="acctSignup" class="primary">Create account</button>
+        <button id="acctLogin" class="ghost">Sign in</button>
+        <span id="acctMsg" class="saveMsg"></span>
+      </div>
+      <div id="acctSignedIn" hidden>
+        <div id="acctInfo" class="note" style="margin-bottom:12px"></div>
+        <button id="acctUpgrade" class="primary" hidden>Go Pro — $4/mo</button>
+        <button id="acctRefresh" class="ghost">Refresh status</button>
+        <button id="acctSignout" class="ghost">Sign out</button>
+        <span id="acctMsg2" class="saveMsg"></span>
+      </div>
+    </section>
+
+    <section class="card">
       <h2>Personal rules</h2>
       <p class="note">Used when this device is <em>not</em> managed by a team.</p>
       <div class="field">

@@ -5,13 +5,16 @@
     loginErr: $('#loginErr'), app: $('#app'), orgName: $('#orgName'), logout: $('#logout'),
     cards: $('#cards'), groupSel: $('#groupSel'), policyEditor: $('#policyEditor'),
     reqList: $('#reqList'), pendingDot: $('#pendingDot'),
-    enrollBox: $('#enrollBox'), deviceList: $('#deviceList'), reportList: $('#reportList')
+    enrollBox: $('#enrollBox'), deviceList: $('#deviceList'), reportList: $('#reportList'),
+    tabSignin: $('#tabSignin'), tabSignup: $('#tabSignup'), orgNameField: $('#orgNameField'),
+    orgName2: $('#orgName2'), authSubmit: $('#authSubmit'), billingCard: $('#billingCard'), billingDot: $('#billingDot')
   };
 
   let token = localStorage.getItem('db_token') || null;
   let groups = [];
   let categories = [];
   let pollTimer = null;
+  let subActive = true;
 
   async function api(path, opts) {
     opts = opts || {};
@@ -33,14 +36,26 @@
   }
 
   /* ---------- auth ---------- */
+  let authMode = 'signin';
+  function setAuthMode(m) {
+    authMode = m;
+    el.tabSignin.classList.toggle('on', m === 'signin');
+    el.tabSignup.classList.toggle('on', m === 'signup');
+    el.orgNameField.hidden = m !== 'signup';
+    el.authSubmit.textContent = m === 'signin' ? 'Sign in' : 'Create organization';
+  }
+  el.tabSignin.addEventListener('click', () => setAuthMode('signin'));
+  el.tabSignup.addEventListener('click', () => setAuthMode('signup'));
+
   el.loginForm.addEventListener('submit', async e => {
     e.preventDefault();
     el.loginErr.textContent = '';
-    const res = await fetch('/api/auth/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: el.email.value, password: el.password.value })
-    }).then(r => r.json());
-    if (!res.ok) { el.loginErr.textContent = res.error || 'Sign in failed'; return; }
+    const path = authMode === 'signup' ? '/api/auth/org/signup' : '/api/auth/login';
+    const body = authMode === 'signup'
+      ? { orgName: el.orgName2.value.trim(), name: el.email.value, email: el.email.value.trim(), password: el.password.value }
+      : { email: el.email.value.trim(), password: el.password.value };
+    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+    if (!res.ok) { el.loginErr.textContent = res.error || 'Failed'; return; }
     token = res.token;
     localStorage.setItem('db_token', token);
     enterApp(res.org);
@@ -69,6 +84,11 @@
   async function loadDashboard() {
     const d = await api('/dashboard');
     if (!d.ok) return;
+    if (d.subscription) {
+      subActive = d.subscription.active;
+      el.billingDot.hidden = subActive;
+      el.orgName.textContent = d.subscription.orgName + (subActive ? ' · active' : ' · inactive');
+    }
     const cards = [
       ['Devices online', d.devicesOnline + ' / ' + d.seats, ''],
       ['Blocks enforced today', d.blocksToday, ''],
@@ -196,6 +216,12 @@
   async function loadDevices() {
     const d = await api('/devices');
     if (!d.ok) return;
+    if (!subActive) {
+      el.enrollBox.innerHTML = '<div><div class="muted" style="font-size:12px">Enrolment is locked until you activate a subscription.</div>' +
+        '<div style="margin-top:6px"><a href="#billing" style="color:var(--amber)">Go to Billing →</a></div></div>';
+      el.deviceList.innerHTML = '';
+      return;
+    }
     el.enrollBox.innerHTML = d.enrollmentCodes.map(c =>
       '<div><div class="muted" style="font-size:12px">Staff install the extension and enter this code — no MDM.</div>' +
       '<div class="code">' + esc(c.code) + '</div></div>' +
@@ -218,14 +244,53 @@
       : '<div class="empty">No blocked attempts logged yet.</div>';
   }
 
+  /* ---------- billing ---------- */
+  async function loadBilling() {
+    const s = await api('/billing/status');
+    if (!s.ok) return;
+    const active = s.active;
+    const price = 4;
+    if (active) {
+      const renew = s.currentPeriodEnd ? new Date(s.currentPeriodEnd).toLocaleDateString() : '—';
+      el.billingCard.innerHTML =
+        '<div class="billMetric">' +
+        '<div class="m"><div class="k">Status</div><div class="v"><span class="pill active">active</span></div></div>' +
+        '<div class="m"><div class="k">Seats</div><div class="v">' + s.seats + '</div></div>' +
+        '<div class="m"><div class="k">Monthly</div><div class="v">$' + (s.seats * price) + '</div></div>' +
+        '<div class="m"><div class="k">Renews</div><div class="v" style="font-size:14px">' + renew + '</div></div>' +
+        '</div>' +
+        '<div class="rowFields" style="align-items:flex-end"><div class="field"><label>Change seats</label>' +
+        '<input id="bill_seats" class="smallInput" type="number" min="3" value="' + s.seats + '" /></div>' +
+        '<button id="bill_update" class="primary" style="width:auto;margin:0 0 16px">Update &amp; pay</button>' +
+        '<button id="bill_cancel" class="ghost" style="margin:0 0 16px">Cancel subscription</button></div>';
+      $('#bill_update').addEventListener('click', () => checkout(+$('#bill_seats').value));
+      $('#bill_cancel').addEventListener('click', async () => { await api('/billing/cancel', { method: 'POST' }); refresh(); });
+    } else {
+      el.billingCard.innerHTML =
+        '<div class="billMetric"><div class="m"><div class="k">Status</div><div class="v"><span class="pill inactive">' + esc(s.status || 'inactive') + '</span></div></div></div>' +
+        '<p class="note" style="color:var(--ash);font-size:13px;margin:0 0 12px">Activate a subscription to unlock enrolment and enforce your policy. $' + price + '/seat/month, 3-seat minimum.</p>' +
+        '<div class="rowFields" style="align-items:flex-end"><div class="field"><label>Seats</label>' +
+        '<input id="bill_seats" class="smallInput" type="number" min="3" value="5" /></div>' +
+        '<button id="bill_go" class="primary" style="width:auto;margin:0 0 16px">Subscribe &amp; pay</button></div>';
+      $('#bill_go').addEventListener('click', () => checkout(+$('#bill_seats').value));
+    }
+  }
+
+  async function checkout(seats) {
+    const res = await api('/billing/checkout', { method: 'POST', body: JSON.stringify({ plan: 'team_monthly', seats }) });
+    if (res.ok && res.url) location.href = res.url;
+    else alert(res.error || 'Checkout failed');
+  }
+
   async function refresh() {
     try {
-      await Promise.all([loadDashboard(), loadRequests(), loadDevices(), loadReports()]);
+      await Promise.all([loadDashboard(), loadRequests(), loadDevices(), loadReports(), loadBilling()]);
     } catch (e) { /* handled in api() */ }
   }
 
   /* ---------- boot ---------- */
   (async () => {
+    setAuthMode('signin');
     if (token) {
       const d = await fetch('/api/dashboard', { headers: { 'Authorization': 'Bearer ' + token } });
       if (d.ok) { enterApp(null); return; }

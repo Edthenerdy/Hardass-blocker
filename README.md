@@ -18,8 +18,10 @@ This repo contains the concept, the brand, and a working proof-of-concept.
 | [`enterprise-policy/`](enterprise-policy/) | Chrome/Edge force-install policy — makes the extension unremovable without MDM |
 | [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Hardass" product) |
 | [`server/`](server/) | Enterprise POC backend — Node.js API (auth, policy sync, approvals, telemetry) |
-| [`console/`](console/) | Enterprise POC — the admin console (Deadbolt for Teams) |
+| [`console/`](console/) | Enterprise POC — the admin console (Deadbolt for Teams) with self-serve signup + billing |
 | [`device/`](device/) | Enterprise POC — a managed-device client that enrols and enforces policy |
+| [`account/`](account/) | Consumer web app — signup, pricing, Hardass Pro checkout + account |
+| [`server/billing.js`](server/billing.js) | Billing engine — plans, checkout, entitlements (simulated now, real Stripe when `STRIPE_SECRET_KEY` is set) |
 | [`tools/gen-icons.js`](tools/gen-icons.js) | Dependency-free PNG icon generator |
 
 There are two products here sharing one idea, matching the business plan's two phases:
@@ -105,6 +107,16 @@ Now the extension:
 
 Leaving a team is blocked while the policy is `locked` — exactly the "can't talk your way out of it" promise, enforced by the org instead of a timer.
 
+### Signup & payments
+
+Both products share one billing backend. It runs in **simulated mode** out of the box (no account, no real charges) and switches to **real Stripe** the moment you set `STRIPE_SECRET_KEY` — the Stripe calls go through Stripe's REST API over `fetch`, so the server stays dependency-free.
+
+**Consumer (Hardass Pro):** open <http://localhost:8787/account/> → create an account → free tier blocks 5 sites; **Go Pro** ($4/mo) or **Lifetime** ($49) runs a checkout → entitlement flips to Pro. In the extension, **Settings › Account** signs in to the same backend; once Pro, the 5-site free limit is lifted.
+
+**SME (Deadbolt for Teams):** in the console, **Create organization** → the org starts *inactive* and **enrolment is blocked** → **Billing** → pick seats ($4/seat/mo, 3-seat min) → checkout → the subscription goes *active* and enrolment codes unlock. Cancelling re-locks enrolment. Payment ⇒ enforcement; no payment ⇒ no enforcement.
+
+**Go live with Stripe:** set `STRIPE_SECRET_KEY` (test key `sk_test_…` is fine) and, for signature-verified webhooks, `STRIPE_WEBHOOK_SECRET`, then point a Stripe webhook at `POST /api/stripe/webhook`. Checkout, subscriptions (with seat quantity), and entitlement updates all work through the same code paths as the simulator.
+
 ### Enterprise backend notes
 
 - Zero npm dependencies — plain Node `http`, `crypto` (scrypt password hashing), JSON-file store (`server/data.json`, gitignored, seeded on first run).
@@ -130,7 +142,8 @@ Leaving a team is blocked while the policy is `locked` — exactly the "can't ta
 - [x] Circumvention-resistance layers 1–2: bypass-vector blocking (proxies/translate/cache/archive), self-healing watchdog, pinned extension ID, and Chrome/Edge **force-install** policy so the user can't disable/remove it or use incognito. See [`docs/MOAT.md`](docs/MOAT.md) + [`enterprise-policy/`](enterprise-policy/).
 - [ ] Circumvention-resistance layer 3: native OS agent (DNS/hosts/other-browser/uninstall resistance). *(needs: native builds, code-signing, admin testing)*
 - [ ] Cross-browser (Firefox) build target.
-- [ ] Production backend: real DB + multi-tenancy, SSO, Stripe billing, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
+- [x] Billing + signup: consumer accounts (free/Pro/lifetime) and SME self-serve org signup with per-seat subscriptions; checkout, entitlements, cancel, and paywall gating. Simulated now, real Stripe behind `STRIPE_SECRET_KEY`. See [`server/billing.js`](server/billing.js) + [`account/`](account/).
+- [ ] Production backend: real DB + **multi-tenancy** (single-org POC today), **SSO**, live Stripe keys, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
 
 ---
 

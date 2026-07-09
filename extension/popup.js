@@ -119,6 +119,7 @@
     if (!domain) { el.addHint.textContent = 'Type a site like instagram.com'; return; }
     const res = await chrome.runtime.sendMessage({ type: 'addBlock', domain });
     if (res && res.ok) { el.input.value = ''; el.addHint.textContent = domain + ' is now blocked.'; render(); }
+    else if (res && res.error === 'free-limit') el.addHint.textContent = 'Free tier is ' + HB.FREE_LIMIT + ' sites. Go Pro in Settings › Account.';
     else el.addHint.textContent = res && res.error === 'managed' ? 'Managed by your organization.' : 'Could not block that.';
   }
 

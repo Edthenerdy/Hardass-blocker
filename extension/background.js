@@ -77,6 +77,9 @@ async function addBlock(rawDomain) {
   const domain = HB.normalizeDomain(rawDomain);
   if (!domain) return { ok: false, error: 'empty' };
   if (state.blocklist.some(b => b.domain === domain)) return { ok: true, domain };
+  if (!HB.isManaged(state) && !HB.isPro(state) && state.blocklist.length >= HB.FREE_LIMIT) {
+    return { ok: false, error: 'free-limit' };
+  }
   state.blocklist.push({ domain, ruleId: nextRuleId(state), addedAt: Date.now() });
   await HB.set({ blocklist: state.blocklist });
   await applyRules();
