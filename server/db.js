@@ -18,14 +18,27 @@ function load() {
 }
 
 // Backfill fields added after a data.json was first written, so older dev data
-// keeps working without a manual reset.
+// keeps working without a manual reset — including the single-org -> multi-org
+// conversion.
 function migrate() {
   if (!db.users) db.users = [];
   if (!db.checkouts) db.checkouts = [];
-  if (db.org && db.org.subscriptionStatus === undefined) {
-    db.org.plan = 'team_monthly';
-    db.org.subscriptionStatus = 'active';
-    db.org.currentPeriodEnd = Date.now() + 365 * 24 * 3600 * 1000;
+  if (!db.orgs) {
+    const o = db.org || { id: 'org1', name: 'Organization', seats: 0 };
+    o.groups = db.groups || [];
+    o.enrollmentCodes = db.enrollmentCodes || [];
+    if (o.subscriptionStatus === undefined) {
+      o.plan = 'team_monthly';
+      o.subscriptionStatus = 'active';
+      o.currentPeriodEnd = Date.now() + 365 * 24 * 3600 * 1000;
+    }
+    db.orgs = [o];
+    (db.admins || []).forEach(a => { if (!a.orgId) a.orgId = o.id; });
+    (db.devices || []).forEach(d => { if (!d.orgId) d.orgId = o.id; });
+    (db.requests || []).forEach(r => { if (!r.orgId) r.orgId = o.id; });
+    (db.events || []).forEach(e => { if (!e.orgId) e.orgId = o.id; });
+    Object.values(db.tokens || {}).forEach(t => { if ((t.kind === 'admin' || t.kind === 'device') && !t.orgId) t.orgId = o.id; });
+    delete db.org; delete db.groups; delete db.enrollmentCodes;
   }
   save();
 }

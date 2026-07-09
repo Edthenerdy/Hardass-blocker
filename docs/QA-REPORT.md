@@ -43,7 +43,7 @@
 | Non-MDM enrolment via code | ✅ Pass |
 | Compliance reporting (blocked attempts) | ✅ Pass |
 | Cancel re-locks new enrolment | ✅ Pass |
-| **Multiple real businesses can coexist** | ❌ **Fail** — single-tenant |
+| **Multiple real businesses can coexist** | ✅ **Pass** — multi-tenant (fixed; 21/21 isolation checks) |
 | **Cancelled org's already-enrolled devices stop being served** | ❌ **Fail** — they keep syncing |
 | Admin auth hardening (rate limit, SSO) | ⚠️ Partial |
 
@@ -54,7 +54,7 @@
 ## Findings by severity
 
 ### Major — fix before real customers
-1. **Single-tenant / data-bleed.** Only one org exists server-side. A new org signup *reclaims* it and inherits the seeded groups, codes, and devices. Two real businesses cannot coexist. *(Needs the production multi-tenant data model.)*
+1. ~~**Single-tenant / data-bleed.**~~ ✅ **FIXED.** The backend is now multi-tenant: each org signup creates an isolated org with its own groups, unique enrolment code, devices, requests, reports, and billing. Verified with 21/21 isolation checks including cross-org access denial. Admins carry `orgId`; every admin/device endpoint is scoped to it.
 2. **Consumer Pro entitlement is soft & client-side.** The extension trusts a cached `account.plan` in `chrome.storage`; a technical user can set it to `pro` and unlock Pro without paying. Fix: server-verified/signed entitlement checked by the background worker.
 3. **Entitlement staleness.** A lapsed monthly sub stays "Pro" in the extension until the user manually hits *Refresh status*; a cancelled org's already-enrolled devices keep pulling policy. Fix: periodic server re-check + treat device tokens as subject to current subscription state.
 
@@ -83,8 +83,10 @@
 
 ## Ranked next steps to reach "can take real money"
 
-1. **Multi-tenancy** — real org isolation (the single biggest gate for B2B).
-2. **Server-verified entitlement** for the consumer extension (close the soft paywall + staleness).
+1. ~~Multi-tenancy~~ ✅ **done** — real org isolation, verified.
+2. **Server-verified entitlement** for the consumer extension (close the soft paywall + staleness). *Now the top remaining gate.*
 3. **Live Stripe** — drop in keys, wire the webhook, test with `sk_test_…`.
 4. Publish the extension (Web Store / self-host) so force-install resolves the pinned ID.
 5. Polish: consumer account recovery, rate limiting, a11y labels, console payment banner.
+
+*Updated after the multi-tenancy build: the B2B side now has no known "must-fix-before-customers" defect. The remaining major item is consumer entitlement hardening; the rest need your Stripe/hosting accounts.*

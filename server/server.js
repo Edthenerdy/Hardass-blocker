@@ -81,8 +81,26 @@ function expandBlocklist(policy) {
   return [...set].sort();
 }
 
+function orgById(id) {
+  return db.get().orgs.find(o => o.id === id);
+}
+function reqOrg(rec) {
+  return rec && orgById(rec.orgId);
+}
+function genCode() {
+  const data = db.get();
+  const taken = new Set();
+  data.orgs.forEach(o => (o.enrollmentCodes || []).forEach(e => taken.add(e.code)));
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const part = n => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  let code;
+  do { code = part(3) + '-' + part(3) + '-' + part(3); } while (taken.has(code));
+  return code;
+}
+
 function groupFor(device) {
-  return db.get().groups.find(g => g.id === device.groupId);
+  const o = orgById(device.orgId);
+  return o && o.groups.find(g => g.id === device.groupId);
 }
 
 function activeAllowances(deviceId) {
@@ -96,7 +114,7 @@ function effectivePolicy(device) {
   const g = groupFor(device);
   const p = g.policy;
   return {
-    org: db.get().org.name,
+    org: (orgById(device.orgId) || {}).name,
     group: g.name,
     enforcement: p.enforcement,
     unblockMode: p.unblockMode,
@@ -176,9 +194,9 @@ async function api(req, res, pathname) {
       return send(res, 401, { ok: false, error: 'Wrong email or password' });
     }
     const token = newToken();
-    data.tokens[token] = { kind: 'admin', id: admin.id, expiresAt: Date.now() + TOKEN_TTL };
+    data.tokens[token] = { kind: 'admin', id: admin.id, orgId: admin.orgId, expiresAt: Date.now() + TOKEN_TTL };
     db.save();
-    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org: data.org });
+    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org: orgById(admin.orgId) });
   }
 
   // POST /api/auth/user/signup {email, password}  (consumer accounts)
@@ -215,16 +233,30 @@ async function api(req, res, pathname) {
     if (!email || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'Email and a 6+ char password required' });
     if (data.admins.some(a => a.email.toLowerCase() === email)) return send(res, 409, { ok: false, error: 'Admin already exists — sign in instead' });
     const { salt, hash } = hashPassword(String(body.password));
-    const admin = { id: newId('adm'), email, name: String(body.name || email), salt, hash };
+    // Create a fresh, isolated organization with a starter group + unique code.
+    const groupId = newId('grp');
+    const org = {
+      id: newId('org'),
+      name: String(body.orgName || 'My organization').slice(0, 80),
+      seats: 0, plan: 'team_monthly', subscriptionStatus: 'inactive', currentPeriodEnd: null,
+      groups: [{
+        id: groupId, name: 'Everyone',
+        policy: {
+          enforcement: 'locked', unblockMode: 'admin-approval', cooldownMinutes: 20, allowanceMinutes: 10,
+          categories: ['Social', 'Gambling', 'Adult'], customBlocklist: [],
+          schedule: { days: 'Mon–Fri', from: '08:00', to: '18:00' }
+        }
+      }],
+      enrollmentCodes: []
+    };
+    org.enrollmentCodes.push({ code: genCode(), groupId });
+    data.orgs.push(org);
+    const admin = { id: newId('adm'), orgId: org.id, email, name: String(body.name || email), salt, hash };
     data.admins.push(admin);
-    // Single-org POC: the new signup (re)claims the org and starts inactive until paid.
-    data.org.name = String(body.orgName || 'My organization').slice(0, 80);
-    data.org.subscriptionStatus = 'inactive';
-    data.org.seats = 0;
     const token = newToken();
-    data.tokens[token] = { kind: 'admin', id: admin.id, expiresAt: Date.now() + TOKEN_TTL };
+    data.tokens[token] = { kind: 'admin', id: admin.id, orgId: org.id, expiresAt: Date.now() + TOKEN_TTL };
     db.save();
-    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org: data.org });
+    return send(res, 200, { ok: true, token, admin: { name: admin.name, email: admin.email }, org });
   }
 
   // GET /api/plans  (public pricing)
@@ -255,7 +287,7 @@ async function api(req, res, pathname) {
 
     if (method === 'POST' && seg[1] === 'checkout') {
       const body = await readBody(req);
-      const refId = userRec ? userRec.id : data.org.id;
+      const refId = userRec ? userRec.id : adminRec.orgId;
       try {
         const out = await billing.createCheckout({ kind, refId, plan: body.plan, seats: body.seats, origin: originOf(req) });
         return send(res, 200, { ok: true, ...out });
@@ -266,12 +298,12 @@ async function api(req, res, pathname) {
         const u = data.users.find(x => x.id === userRec.id);
         return send(res, 200, { ok: true, kind, ...billing.consumerStatus(u) });
       }
-      const o = data.org;
+      const o = reqOrg(adminRec);
       return send(res, 200, { ok: true, kind, status: o.subscriptionStatus, active: billing.orgActive(o), seats: o.seats, plan: o.plan, currentPeriodEnd: o.currentPeriodEnd });
     }
     if (method === 'POST' && seg[1] === 'cancel') {
       if (userRec) billing.applyEntitlement('consumer', userRec.id, 'free', 1);
-      else { data.org.subscriptionStatus = 'canceled'; db.save(); }
+      else { const o = reqOrg(adminRec); o.subscriptionStatus = 'canceled'; db.save(); }
       return send(res, 200, { ok: true });
     }
     return send(res, 404, { ok: false, error: 'unknown billing route' });
@@ -283,11 +315,16 @@ async function api(req, res, pathname) {
   if (method === 'POST' && seg[0] === 'enroll') {
     const body = await readBody(req);
     const code = String(body.code || '').trim().toUpperCase();
-    const entry = data.enrollmentCodes.find(e => e.code === code);
+    let org = null, entry = null;
+    for (const o of data.orgs) {
+      const e = (o.enrollmentCodes || []).find(x => x.code === code);
+      if (e) { org = o; entry = e; break; }
+    }
     if (!entry) return send(res, 400, { ok: false, error: 'Invalid enrollment code' });
-    if (!billing.orgActive(data.org)) return send(res, 402, { ok: false, error: 'This organization has no active subscription.' });
+    if (!billing.orgActive(org)) return send(res, 402, { ok: false, error: 'This organization has no active subscription.' });
     const device = {
       id: newId('dev'),
+      orgId: org.id,
       name: String(body.deviceName || 'Unnamed device').slice(0, 60),
       groupId: entry.groupId,
       enrolledAt: Date.now(),
@@ -295,7 +332,7 @@ async function api(req, res, pathname) {
     };
     data.devices.push(device);
     const token = newToken();
-    data.tokens[token] = { kind: 'device', id: device.id, expiresAt: Date.now() + 365 * 24 * 3600 * 1000 };
+    data.tokens[token] = { kind: 'device', id: device.id, orgId: org.id, expiresAt: Date.now() + 365 * 24 * 3600 * 1000 };
     db.save();
     return send(res, 200, { ok: true, deviceToken: token, device: { id: device.id, name: device.name }, policy: effectivePolicy(device) });
   }
@@ -316,7 +353,7 @@ async function api(req, res, pathname) {
     // POST /api/device/telemetry {domain, type}
     if (method === 'POST' && seg[1] === 'telemetry') {
       const body = await readBody(req);
-      data.events.push({ id: newId('ev'), deviceId: device.id, domain: normalizeDomain(body.domain), type: body.type === 'allowed' ? 'allowed' : 'blocked', ts: Date.now() });
+      data.events.push({ id: newId('ev'), orgId: device.orgId, deviceId: device.id, domain: normalizeDomain(body.domain), type: body.type === 'allowed' ? 'allowed' : 'blocked', ts: Date.now() });
       db.save();
       return send(res, 200, { ok: true });
     }
@@ -330,7 +367,7 @@ async function api(req, res, pathname) {
       if (String(body.reason || '').trim().length < 10) return send(res, 400, { ok: false, error: 'reason too short' });
       const mins = g.policy.allowanceMinutes;
       const request = {
-        id: newId('req'), deviceId: device.id, deviceName: device.name, groupId: device.groupId,
+        id: newId('req'), orgId: device.orgId, deviceId: device.id, deviceName: device.name, groupId: device.groupId,
         domain, reason: String(body.reason).slice(0, 300), requestedMin: mins, status: 'approved',
         grantedMin: mins, createdAt: Date.now(), decidedAt: Date.now(), expiresAt: Date.now() + mins * 60000, selfServe: true
       };
@@ -347,6 +384,7 @@ async function api(req, res, pathname) {
       if (existing) return send(res, 200, { ok: true, request: existing });
       const request = {
         id: newId('req'),
+        orgId: device.orgId,
         deviceId: device.id,
         deviceName: device.name,
         groupId: device.groupId,
@@ -373,35 +411,40 @@ async function api(req, res, pathname) {
 
   const rec = auth(req, 'admin');
   if (!rec) return send(res, 401, { ok: false, error: 'unauthorized' });
+  const org = reqOrg(rec);
+  if (!org) return send(res, 401, { ok: false, error: 'unknown org' });
+  const myDevices = () => data.devices.filter(d => d.orgId === org.id);
+  const myRequests = () => data.requests.filter(r => r.orgId === org.id);
 
   // GET /api/dashboard
   if (method === 'GET' && seg[0] === 'dashboard') {
     const now = Date.now();
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const online = data.devices.filter(d => now - d.lastSeen < ONLINE_WINDOW).length;
-    const blocksToday = data.events.filter(e => e.type === 'blocked' && e.ts >= startOfDay.getTime()).length;
-    const pending = data.requests.filter(r => r.status === 'pending').length;
+    const devs = myDevices();
+    const online = devs.filter(d => now - d.lastSeen < ONLINE_WINDOW).length;
+    const blocksToday = data.events.filter(e => e.orgId === org.id && e.type === 'blocked' && e.ts >= startOfDay.getTime()).length;
+    const pending = myRequests().filter(r => r.status === 'pending').length;
     return send(res, 200, {
       ok: true,
       devicesOnline: online,
-      devicesEnrolled: data.devices.length,
-      seats: data.org.seats,
+      devicesEnrolled: devs.length,
+      seats: org.seats,
       blocksToday,
       pendingRequests: pending,
-      coverage: data.org.seats ? Math.min(100, Math.round((data.devices.length / data.org.seats) * 100)) : 0,
-      subscription: { status: data.org.subscriptionStatus, active: billing.orgActive(data.org), plan: data.org.plan, orgName: data.org.name }
+      coverage: org.seats ? Math.min(100, Math.round((devs.length / org.seats) * 100)) : 0,
+      subscription: { status: org.subscriptionStatus, active: billing.orgActive(org), plan: org.plan, orgName: org.name }
     });
   }
 
   // GET /api/groups
   if (method === 'GET' && seg[0] === 'groups' && !seg[1]) {
-    return send(res, 200, { ok: true, groups: data.groups, categories: Object.keys(CATEGORIES) });
+    return send(res, 200, { ok: true, groups: org.groups, categories: Object.keys(CATEGORIES) });
   }
 
   // PUT /api/groups/:id/policy
   if (method === 'PUT' && seg[0] === 'groups' && seg[2] === 'policy') {
     const body = await readBody(req);
-    const g = data.groups.find(x => x.id === seg[1]);
+    const g = org.groups.find(x => x.id === seg[1]);
     if (!g) return send(res, 404, { ok: false, error: 'no group' });
     const p = g.policy;
     if (['locked', 'advisory'].includes(body.enforcement)) p.enforcement = body.enforcement;
@@ -417,19 +460,19 @@ async function api(req, res, pathname) {
   // GET /api/devices
   if (method === 'GET' && seg[0] === 'devices') {
     const now = Date.now();
-    const list = data.devices.map(d => ({
+    const list = myDevices().map(d => ({
       id: d.id, name: d.name,
       group: (groupFor(d) || {}).name,
       online: now - d.lastSeen < ONLINE_WINDOW,
       lastSeen: d.lastSeen
     }));
-    return send(res, 200, { ok: true, devices: list, enrollmentCodes: data.enrollmentCodes.map(e => ({ code: e.code, group: (data.groups.find(g => g.id === e.groupId) || {}).name })) });
+    return send(res, 200, { ok: true, devices: list, enrollmentCodes: org.enrollmentCodes.map(e => ({ code: e.code, group: (org.groups.find(g => g.id === e.groupId) || {}).name })) });
   }
 
   // GET /api/requests
   if (method === 'GET' && seg[0] === 'requests' && !seg[1]) {
-    const list = [...data.requests].sort((a, b) => b.createdAt - a.createdAt).map(r => ({
-      ...r, group: (data.groups.find(g => g.id === r.groupId) || {}).name
+    const list = myRequests().sort((a, b) => b.createdAt - a.createdAt).map(r => ({
+      ...r, group: (org.groups.find(g => g.id === r.groupId) || {}).name
     }));
     return send(res, 200, { ok: true, requests: list });
   }
@@ -437,7 +480,7 @@ async function api(req, res, pathname) {
   // POST /api/requests/:id/decision {decision, grantedMin}
   if (method === 'POST' && seg[0] === 'requests' && seg[2] === 'decision') {
     const body = await readBody(req);
-    const r = data.requests.find(x => x.id === seg[1]);
+    const r = data.requests.find(x => x.id === seg[1] && x.orgId === org.id);
     if (!r) return send(res, 404, { ok: false, error: 'no request' });
     if (r.status !== 'pending') return send(res, 400, { ok: false, error: 'already decided' });
     r.decidedAt = Date.now();
@@ -456,7 +499,7 @@ async function api(req, res, pathname) {
   // GET /api/reports
   if (method === 'GET' && seg[0] === 'reports') {
     const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
-    const blocked = data.events.filter(e => e.type === 'blocked' && e.ts >= weekAgo);
+    const blocked = data.events.filter(e => e.orgId === org.id && e.type === 'blocked' && e.ts >= weekAgo);
     const byDomain = {};
     for (const e of blocked) byDomain[e.domain] = (byDomain[e.domain] || 0) + 1;
     const top = Object.entries(byDomain).map(([domain, count]) => ({ domain, count })).sort((a, b) => b.count - a.count).slice(0, 12);

@@ -37,7 +37,8 @@ function applyEntitlement(kind, refId, plan, seats) {
     else if (plan === 'pro_monthly') { u.plan = 'pro'; u.lifetime = false; u.proUntil = Date.now() + MONTH; }
     else { u.plan = 'free'; u.lifetime = false; u.proUntil = null; }
   } else if (kind === 'team') {
-    const o = data.org;
+    const o = (data.orgs || []).find(x => x.id === refId);
+    if (!o) return;
     o.plan = plan;
     o.seats = Math.max(1, seats || o.seats);
     o.subscriptionStatus = 'active';
@@ -123,7 +124,8 @@ function handleStripeWebhook(rawBody, sigHeader) {
     const m = obj.metadata;
     applyEntitlement(m.kind, m.refId, m.plan, parseInt(m.seats, 10) || 1);
   } else if (event.type === 'customer.subscription.deleted' && obj && obj.metadata && obj.metadata.kind === 'team') {
-    const o = db.get().org; o.subscriptionStatus = 'canceled'; db.save();
+    const o = (db.get().orgs || []).find(x => x.id === obj.metadata.refId);
+    if (o) { o.subscriptionStatus = 'canceled'; db.save(); }
   }
   return { ok: true };
 }
