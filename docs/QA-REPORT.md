@@ -19,7 +19,7 @@
 | Criterion | Result |
 |---|---|
 | Can install free and block sites with the Cooldown | ✅ Pass |
-| Pricing is clear (Free / $4 Pro / $49 lifetime) | ✅ Pass |
+| Pricing is clear (Free / $9 Pro monthly) | ✅ Pass |
 | Signup, checkout, and Pro unlock work end-to-end | ✅ Pass (simulated payment) |
 | Free-tier limit (5 sites) enforced, lifted by Pro | ✅ Pass |
 | Bypass tricks (proxy/translate/cache) blocked | ✅ Pass |

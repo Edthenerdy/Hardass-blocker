@@ -65,13 +65,13 @@
     if (!res.ok) { token = null; localStorage.removeItem('hb_user_token'); el.loggedOut.hidden = false; el.loggedIn.hidden = true; return; }
     el.loggedOut.hidden = true; el.loggedIn.hidden = false; el.logout.hidden = false;
     const pro = res.plan === 'pro';
-    el.planName.textContent = pro ? (res.lifetime ? 'Pro (Lifetime)' : 'Pro') : 'Free';
+    el.planName.textContent = pro ? 'Pro' : 'Free';
     el.planName.style.color = pro ? 'var(--clear)' : 'var(--bone)';
     el.planDetail.textContent = pro
-      ? (res.lifetime ? 'Yours forever. No subscription.' : (res.proUntil ? 'Renews ' + new Date(res.proUntil).toLocaleDateString() : 'Active.'))
+      ? (res.proUntil ? 'Renews ' + new Date(res.proUntil).toLocaleDateString() : 'Active.')
       : 'Free tier — up to 5 blocked sites.';
     el.upgradeBox.style.display = pro ? 'none' : 'block';
-    el.cancelBtn.hidden = !(pro && !res.lifetime);
+    el.cancelBtn.hidden = !pro;
   }
 
   (async () => {

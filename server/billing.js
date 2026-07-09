@@ -11,8 +11,7 @@ const MONTH = 30 * 24 * 3600 * 1000;
 const PLANS = {
   consumer: {
     free: { id: 'free', label: 'Free', amount: 0, interval: null },
-    pro_monthly: { id: 'pro_monthly', label: 'Hardass Pro (monthly)', amount: 400, interval: 'month' },
-    lifetime: { id: 'lifetime', label: 'Hardass Pro (lifetime)', amount: 4900, interval: null }
+    pro_monthly: { id: 'pro_monthly', label: 'Hardass Pro (monthly)', amount: 900, interval: 'month' }
   },
   team: {
     team_monthly: { id: 'team_monthly', label: 'Deadbolt for Teams (per seat)', unitAmount: 400, interval: 'month', minSeats: 3 }
@@ -33,8 +32,7 @@ function applyEntitlement(kind, refId, plan, seats) {
   if (kind === 'consumer') {
     const u = data.users.find(x => x.id === refId);
     if (!u) return;
-    if (plan === 'lifetime') { u.plan = 'pro'; u.lifetime = true; u.proUntil = null; }
-    else if (plan === 'pro_monthly') { u.plan = 'pro'; u.lifetime = false; u.proUntil = Date.now() + MONTH; }
+    if (plan === 'pro_monthly') { u.plan = 'pro'; u.lifetime = false; u.proUntil = Date.now() + MONTH; }
     else { u.plan = 'free'; u.lifetime = false; u.proUntil = null; }
   } else if (kind === 'team') {
     const o = (data.orgs || []).find(x => x.id === refId);

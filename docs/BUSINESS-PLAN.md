@@ -85,7 +85,7 @@ Same engine, two chassis. The hard engineering problem — a block that genuinel
 
 ## 6. Business model & pricing (hypothesis)
 
-- **Individual:** freemium. Free tier genuinely useful (more generous than BlockSite's 3-site cap — the cap is a common complaint and a cheap way to win goodwill). Paid ~$4–6/mo or a one-time lifetime (Cold Turkey shows lifetime pricing works and builds trust).
+- **Individual:** freemium. Free tier genuinely useful (more generous than BlockSite's 3-site cap — the cap is a common complaint and a cheap way to win goodwill). Paid **$9/mo** (monthly only — no lifetime; recurring revenue over a one-off, and it keeps the incentive to keep the product worth paying for).
 - **SME (the wedge):** **per-seat, low minimum.** Freedom's flat $99/mo with an **11-seat minimum** structurally ignores the 3–15 person shop. Serve exactly that shop: e.g. **$3–5/seat/mo, 3-seat minimum**, admin console included. Undercut Freedom on minimums, out-feature them on the one thing they refuse to do (enforcement), stay an order of magnitude below MDM cost/complexity.
 - **Why SME is the better business:** businesses pay and renew; consumers churn on willpower apps within weeks. "Can't be removed by the end user" is a *feature* in B2B (the admin holds the key) instead of an arms race in B2C.
 
