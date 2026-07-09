@@ -1,0 +1,96 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  .stage{width:1280px;height:800px;overflow:hidden;position:relative;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  background-color:#0E0E10;
+  background-image:
+    radial-gradient(rgba(124,129,136,0.20) 1px, transparent 1.6px),
+    radial-gradient(rgba(154,156,163,0.13) 1px, transparent 1.6px);
+  background-size:13px 13px,21px 21px;
+  background-position:0 0,7px 11px;padding:56px;display:flex;flex-direction:column;}
+  
+  .win{width:100%;height:100%;background:#141519;border:1px solid #33353B;border-radius:16px;
+       overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 90px rgba(0,0,0,.55);}
+  .titlebar{height:46px;flex:none;display:flex;align-items:center;gap:9px;padding:0 16px;
+       background:#202226;border-bottom:1px solid #2b2d33;}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none;}
+  .addr{flex:1;height:30px;margin-left:8px;background:#0E0E10;border:.5px solid #33353B;border-radius:8px;
+       display:flex;align-items:center;gap:10px;padding:0 12px;color:#9A9CA3;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:13px;}
+  .addr .lock{color:#FF3B30;font-size:13px;}
+  .addr .url{flex:1;}
+  .content{flex:1;overflow:hidden;}
+  .bp{color:#F4F1EC;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center;height:100%;display:flex;
+      flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;}
+  .bp .wrap{width:100%;max-width:412px;display:flex;flex-direction:column;align-items:center;}
+  .bp .logo{margin-bottom:16px;}
+  .bp h1{font-family:'Archivo Black','Arial Black',Impact,system-ui,sans-serif;font-size:34px;letter-spacing:-0.5px;margin:0 0 8px;line-height:1.05;}
+  .bp .sub{color:#9A9CA3;font-size:15px;margin:0 0 24px;line-height:1.5;}
+  .bp .sub strong{color:#F4F1EC;}
+  .bp .timer{font-family:ui-monospace,'Cascadia Mono',Consolas,'SFMono-Regular',Menlo,monospace;font-variant-numeric:tabular-nums;font-size:64px;font-weight:600;
+      letter-spacing:3px;color:#FFB800;line-height:1;}
+  .bp .timer.done{color:#FF3B30;}
+  .bp .cap{color:#9A9CA3;font-size:13px;margin:10px 0 22px;}
+  .bp .stats{width:100%;background:#1B1C20;border:.5px solid #33353B;border-radius:12px;
+      padding:14px 16px;margin:0 0 22px;text-align:left;}
+  .bp .stats .row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+  .bp .stats .row span:first-child{color:#9A9CA3;}
+  .bp .stats .row span:last-child{color:#F4F1EC;font-weight:500;}
+  .bp .stats .flag{color:#FF3B30!important;}
+  .bp .reasonLabel{align-self:flex-start;font-size:13px;color:#9A9CA3;margin-bottom:6px;}
+  .bp textarea{width:100%;min-height:78px;resize:none;background:#1B1C20;border:.5px solid #33353B;
+      border-radius:10px;color:#F4F1EC;font-family:inherit;font-size:14px;padding:12px 14px;margin-bottom:6px;line-height:1.5;}
+  .bp textarea.filled{border-color:#FFB800;}
+  .bp textarea.empty{color:#9A9CA3;}
+  .bp .hint{align-self:flex-start;font-size:12px;color:#9A9CA3;margin:0 0 18px;}
+  .bp .actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  .bp button{font-family:inherit;font-size:15px;font-weight:600;border-radius:10px;padding:13px 18px;border:.5px solid transparent;}
+  .bp .primary{background:#F4F1EC;color:#0E0E10;}
+  .bp .danger{background:#FF3B30;color:#fff;}
+  .bp .danger:disabled,.bp .danger.off{background:#33353B;color:#9A9CA3;}
+  .bp .ghost{background:transparent;color:#9A9CA3;border:.5px solid #33353B;font-weight:500;}
+  .cap-strip{display:flex;align-items:center;gap:16px;margin-bottom:26px;}
+  .cap-text h2{font-family:'Archivo Black','Arial Black',Impact,system-ui,sans-serif;font-size:27px;color:#F4F1EC;margin:0;letter-spacing:-0.4px;line-height:1.1;}
+  .cap-text p{font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;color:#9A9CA3;margin:5px 0 0;}
+  </style></head><body><div class="stage"><div class="cap-strip">
+    <svg viewBox="0 0 120 120" width="44" height="44" aria-hidden="true">
+<rect x="20" y="20" width="80" height="80" rx="20" fill="#FF3B30"/><rect x="26" y="46" width="68" height="48" rx="24" fill="#A7ABB2"/>
+<circle cx="38" cy="58" r="3" fill="#7C8188"/><circle cx="82" cy="60" r="2.5" fill="#7C8188"/><circle cx="40" cy="86" r="2.5" fill="#7C8188"/><circle cx="82" cy="84" r="3" fill="#7C8188"/>
+<path d="M43 57L55 61" stroke="#0E0E10" stroke-width="4.4" stroke-linecap="round"/><path d="M77 57L65 61" stroke="#0E0E10" stroke-width="4.4" stroke-linecap="round"/>
+<circle cx="50" cy="70" r="5.5" fill="#0E0E10"/><circle cx="70" cy="70" r="5.5" fill="#0E0E10"/><circle cx="48" cy="68" r="1.8" fill="#F4F1EC"/><circle cx="68" cy="68" r="1.8" fill="#F4F1EC"/>
+<path d="M54 84L66 84" stroke="#0E0E10" stroke-width="3.8" stroke-linecap="round"/></svg>
+    <div class="cap-text"><h2>A cooldown you can’t skip</h2><p>To reopen a blocked site you wait out a timer first. No instant “just this once.”</p></div>
+  </div><div style="flex:1;"><div class="win">
+    <div class="titlebar">
+      <span class="dot" style="background:#FF5F57"></span>
+      <span class="dot" style="background:#FEBC2E"></span>
+      <span class="dot" style="background:#28C840"></span>
+      <div class="addr">
+        <span class="lock">⚠</span>
+        <span class="url">instagram.com</span>
+        <span style="color:#FF3B30;font-weight:700;font-size:12px;letter-spacing:.3px;">● BLOCKED</span>
+      </div>
+    </div>
+    <div class="content" style="
+  background-color:#0E0E10;
+  background-image:
+    radial-gradient(rgba(124,129,136,0.20) 1px, transparent 1.6px),
+    radial-gradient(rgba(154,156,163,0.13) 1px, transparent 1.6px);
+  background-size:13px 13px,21px 21px;
+  background-position:0 0,7px 11px;"><div class="bp"><div class="wrap">
+  <div class="logo"><svg viewBox="0 0 120 120" width="56" height="56" aria-hidden="true">
+<rect x="20" y="20" width="80" height="80" rx="20" fill="#FF3B30"/><rect x="26" y="46" width="68" height="48" rx="24" fill="#A7ABB2"/>
+<circle cx="38" cy="58" r="3" fill="#7C8188"/><circle cx="82" cy="60" r="2.5" fill="#7C8188"/><circle cx="40" cy="86" r="2.5" fill="#7C8188"/><circle cx="82" cy="84" r="3" fill="#7C8188"/>
+<path d="M43 57L55 61" stroke="#0E0E10" stroke-width="4.4" stroke-linecap="round"/><path d="M77 57L65 61" stroke="#0E0E10" stroke-width="4.4" stroke-linecap="round"/>
+<circle cx="50" cy="70" r="5.5" fill="#0E0E10"/><circle cx="70" cy="70" r="5.5" fill="#0E0E10"/><circle cx="48" cy="68" r="1.8" fill="#F4F1EC"/><circle cx="68" cy="68" r="1.8" fill="#F4F1EC"/>
+<path d="M54 84L66 84" stroke="#0E0E10" stroke-width="3.8" stroke-linecap="round"/></svg></div>
+  <h1>Blocked. On purpose.</h1>
+  <p class="sub">instagram.com — on your blocklist since you set it up sober.</p>
+  <div class="timer">17:03</div>
+  <p class="cap">Cooldown before you can unblock. Past-you was serious.</p>
+  <label class="reasonLabel">Tell me why. In writing.</label>
+  <textarea class="empty">Because…</textarea>
+  <p class="hint">At least 15 characters. Be honest — future-you is reading this.</p>
+  <div class="actions"><button class="danger off">Unblock for 10 min</button></div>
+  <button class="ghost" style="align-self:stretch;">Nope — take me back</button>
+</div></div></div>
+  </div></div></div></body></html>
