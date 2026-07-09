@@ -1,0 +1,17 @@
+services:
+  deadbolt:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - DATA_DIR=/data
+      # Uncomment for live Stripe (test keys are fine):
+      # - STRIPE_SECRET_KEY=sk_test_xxx
+      # - STRIPE_WEBHOOK_SECRET=whsec_xxx
+    volumes:
+      - deadbolt-data:/data
+    restart: unless-stopped
+
+volumes:
+  deadbolt-data:

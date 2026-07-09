@@ -20,9 +20,9 @@ Living punch list. **[Me]** = buildable with no accounts. **[You→Me]** = you p
 - [ ] **[You→Me]** Send the assigned extension ID → I confirm it matches the pinned key or update [`enterprise-policy/`](../enterprise-policy/).
 
 ## Gate 4 — Production hosting
-- [ ] **[You · decision]** Pick a host (Render / Railway / Fly / VPS) + a domain.
-- [ ] **[Me]** Containerize the server; swap the JSON-file store for a real DB (SQLite → Postgres).
-- [ ] **[You]** Provision host + DNS; HTTPS comes free via the platform.
+- [x] **[Me]** Containerized (`Dockerfile`, `docker-compose.yml`, `.env.example`); state + keys persist to a `/data` volume via `DATA_DIR`. Ready to deploy — see [`DEPLOY.md`](DEPLOY.md).
+- [ ] **[You · decision]** Pick a host (Render / Railway / Fly / VPS) + a domain, point it at the repo, add a `/data` disk. HTTPS comes free.
+- [ ] **[Me · later]** Swap the JSON-file store for Postgres — only when you outgrow a single instance.
 
 ## Polish ✅ DONE
 - [x] **[Me]** Accessibility labels on the consumer auth form.

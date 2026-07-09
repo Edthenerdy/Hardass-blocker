@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const DIR = path.join(__dirname, '.keys');
+const DIR = process.env.DATA_DIR ? path.join(process.env.DATA_DIR, 'keys') : path.join(__dirname, '.keys');
 const FILE = path.join(DIR, 'entitlement.json');
 const TTL = 24 * 60 * 60 * 1000;
 

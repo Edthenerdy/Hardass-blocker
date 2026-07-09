@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const seed = require('./seed');
 
-const FILE = path.join(__dirname, 'data.json');
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const FILE = path.join(DATA_DIR, 'data.json');
 let db = null;
 
 function load() {
@@ -44,6 +45,7 @@ function migrate() {
 }
 
 function save() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(FILE, JSON.stringify(db, null, 2));
 }
 
