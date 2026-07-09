@@ -7,7 +7,8 @@
     reqList: $('#reqList'), pendingDot: $('#pendingDot'),
     enrollBox: $('#enrollBox'), deviceList: $('#deviceList'), reportList: $('#reportList'),
     tabSignin: $('#tabSignin'), tabSignup: $('#tabSignup'), orgNameField: $('#orgNameField'),
-    orgName2: $('#orgName2'), authSubmit: $('#authSubmit'), billingCard: $('#billingCard'), billingDot: $('#billingDot')
+    orgName2: $('#orgName2'), authSubmit: $('#authSubmit'), billingCard: $('#billingCard'), billingDot: $('#billingDot'),
+    cbanner: $('#cbanner')
   };
 
   let token = localStorage.getItem('db_token') || null;
@@ -73,6 +74,11 @@
   async function enterApp(org) {
     el.login.style.display = 'none';
     el.app.hidden = false;
+    if (new URLSearchParams(location.search).get('paid')) {
+      el.cbanner.hidden = false;
+      el.cbanner.textContent = 'Payment received — your subscription is active. Enrolment is unlocked below.';
+      history.replaceState(null, '', location.pathname);
+    }
     if (org) el.orgName.textContent = org.name + ' · ' + org.seats + ' seats';
     await loadGroups();
     await refresh();

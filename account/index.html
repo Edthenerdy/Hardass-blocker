@@ -49,8 +49,10 @@
           <button id="tabSignup" class="tab on">Create account</button>
           <button id="tabLogin" class="tab">Sign in</button>
         </div>
-        <input id="email" type="email" placeholder="you@email.com" autocomplete="username" />
-        <input id="password" type="password" placeholder="Password (6+ chars)" autocomplete="current-password" />
+        <label for="email" class="sr-only">Email</label>
+        <input id="email" type="email" placeholder="you@email.com" autocomplete="username" aria-label="Email" />
+        <label for="password" class="sr-only">Password</label>
+        <input id="password" type="password" placeholder="Password (6+ chars)" autocomplete="current-password" aria-label="Password" />
         <button id="authBtn" class="primary">Create account</button>
         <p id="authErr" class="err"></p>
       </div>

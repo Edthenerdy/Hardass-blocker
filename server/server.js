@@ -8,6 +8,7 @@ const db = require('./db');
 const { hashPassword, verifyPassword, newToken, newId } = require('./auth');
 const CATEGORIES = require('./categories');
 const billing = require('./billing');
+const entitlement = require('./entitlement');
 
 const PORT = process.env.PORT || 8787;
 const ROOT = path.join(__dirname, '..');
@@ -56,6 +57,21 @@ function bearer(req) {
 
 function originOf(req) {
   return 'http://' + (req.headers.host || 'localhost:' + PORT);
+}
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+function validEmail(e) { return EMAIL_RE.test(String(e || '')); }
+
+const attempts = new Map();
+function rateLimited(key, max, windowMs) {
+  const now = Date.now();
+  const rec = attempts.get(key);
+  if (!rec || now > rec.reset) { attempts.set(key, { count: 1, reset: now + windowMs }); return false; }
+  rec.count++;
+  return rec.count > max;
+}
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 }
 
 function auth(req, kind) {
@@ -186,6 +202,13 @@ async function api(req, res, pathname) {
   const seg = parts.slice(1);
   const method = req.method;
 
+  // Rate-limit all auth attempts (brute-force protection): 10 per 15 min per IP.
+  if (method === 'POST' && seg[0] === 'auth') {
+    if (rateLimited('auth:' + clientIp(req), 10, 15 * 60 * 1000)) {
+      return send(res, 429, { ok: false, error: 'Too many attempts. Try again in a few minutes.' });
+    }
+  }
+
   // POST /api/auth/login
   if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'login') {
     const body = await readBody(req);
@@ -203,7 +226,7 @@ async function api(req, res, pathname) {
   if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'user' && seg[2] === 'signup') {
     const body = await readBody(req);
     const email = String(body.email || '').trim().toLowerCase();
-    if (!email || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'Email and a 6+ char password required' });
+    if (!validEmail(email) || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'A valid email and a 6+ char password are required' });
     if (data.users.some(u => u.email === email)) return send(res, 409, { ok: false, error: 'Account already exists — sign in instead' });
     const { salt, hash } = hashPassword(String(body.password));
     const user = { id: newId('usr'), email, salt, hash, plan: 'free', proUntil: null, lifetime: false, createdAt: Date.now() };
@@ -211,7 +234,7 @@ async function api(req, res, pathname) {
     const token = newToken();
     data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + TOKEN_TTL };
     db.save();
-    return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user) });
+    return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user), entitlement: entitlement.entitlementFor(user) });
   }
 
   // POST /api/auth/user/login {email, password}
@@ -223,14 +246,14 @@ async function api(req, res, pathname) {
     const token = newToken();
     data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + TOKEN_TTL };
     db.save();
-    return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user) });
+    return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user), entitlement: entitlement.entitlementFor(user) });
   }
 
   // POST /api/auth/org/signup {orgName, name, email, password}  (self-serve SME signup)
   if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'org' && seg[2] === 'signup') {
     const body = await readBody(req);
     const email = String(body.email || '').trim().toLowerCase();
-    if (!email || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'Email and a 6+ char password required' });
+    if (!validEmail(email) || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'A valid email and a 6+ char password are required' });
     if (data.admins.some(a => a.email.toLowerCase() === email)) return send(res, 409, { ok: false, error: 'Admin already exists — sign in instead' });
     const { salt, hash } = hashPassword(String(body.password));
     // Create a fresh, isolated organization with a starter group + unique code.
@@ -262,6 +285,11 @@ async function api(req, res, pathname) {
   // GET /api/plans  (public pricing)
   if (method === 'GET' && seg[0] === 'plans') {
     return send(res, 200, { ok: true, plans: billing.PLANS, stripe: billing.useStripe() });
+  }
+
+  // GET /api/entitlement/pubkey  (public — extension verifies signed entitlements with this)
+  if (method === 'GET' && seg[0] === 'entitlement' && seg[1] === 'pubkey') {
+    return send(res, 200, { ok: true, jwk: entitlement.pubkey() });
   }
 
   // POST /api/pay/:id/complete  (simulated checkout confirmation)
@@ -296,7 +324,7 @@ async function api(req, res, pathname) {
     if (method === 'GET' && seg[1] === 'status') {
       if (userRec) {
         const u = data.users.find(x => x.id === userRec.id);
-        return send(res, 200, { ok: true, kind, ...billing.consumerStatus(u) });
+        return send(res, 200, { ok: true, kind, ...billing.consumerStatus(u), entitlement: entitlement.entitlementFor(u) });
       }
       const o = reqOrg(adminRec);
       return send(res, 200, { ok: true, kind, status: o.subscriptionStatus, active: billing.orgActive(o), seats: o.seats, plan: o.plan, currentPeriodEnd: o.currentPeriodEnd });

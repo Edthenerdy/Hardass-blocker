@@ -175,19 +175,24 @@
     const server = acct.server.value.trim();
     const res = await acctApi(server, '/api/auth/user/' + kind, { method: 'POST', body: JSON.stringify({ email: acct.email.value.trim(), password: acct.pass.value }) });
     if (!res.ok) { acct.msg.textContent = res.error || 'Failed'; return; }
-    await HB.set({ account: { serverUrl: server, userToken: res.token, email: acct.email.value.trim().toLowerCase(), plan: (res.status && res.status.plan) || 'free' } });
+    // Store account with plan unset; the background worker verifies the signed
+    // entitlement and sets the real plan (a flag here can't fake Pro).
+    await HB.set({ account: { serverUrl: server, userToken: res.token, email: acct.email.value.trim().toLowerCase(), plan: 'free', verifiedAt: null } });
     acct.pass.value = ''; acct.msg.textContent = '';
+    await chrome.runtime.sendMessage({ type: 'refreshEntitlement' });
     loadAccount();
   }
   acct.signup.addEventListener('click', () => acctAuth('signup'));
   acct.login.addEventListener('click', () => acctAuth('login'));
 
   acct.refresh.addEventListener('click', async () => {
-    const state = await HB.get(); const a = state.account; if (!a) return;
     acct.msg2.textContent = 'Checking…';
-    const res = await acctApi(a.serverUrl, '/api/billing/status', { method: 'GET' }, a.userToken);
-    if (res.ok) { a.plan = res.plan; await HB.set({ account: a }); acct.msg2.textContent = 'Plan: ' + res.plan + '.'; setTimeout(() => { acct.msg2.textContent = ''; }, 1800); loadAccount(); }
-    else acct.msg2.textContent = 'Failed';
+    const res = await chrome.runtime.sendMessage({ type: 'refreshEntitlement' });
+    if (res && res.ok) {
+      acct.msg2.textContent = res.verified ? ('Plan: ' + res.plan + '.') : 'Could not verify — treated as free.';
+      setTimeout(() => { acct.msg2.textContent = ''; }, 2200);
+      loadAccount();
+    } else acct.msg2.textContent = 'Not signed in.';
   });
 
   acct.upgrade.addEventListener('click', async () => {

@@ -3,6 +3,8 @@ importScripts('common.js');
 const REBLOCK_PREFIX = 'reblock:';
 const SYNC_ALARM = 'syncManaged';
 const WATCHDOG_ALARM = 'watchdog';
+const ENTITLEMENT_ALARM = 'entitlement';
+const ENTITLEMENT_GRACE = 3 * 24 * 60 * 60 * 1000;
 const MANAGED_BASE = 10000;
 const BYPASS_BASE = 20000;
 
@@ -207,10 +209,57 @@ async function telemetry(domain, event) {
   catch (e) { /* offline: ignore */ }
 }
 
+/* ---------------- consumer entitlement (server-signed) ---------------- */
+
+function b64urlToBytes(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  const b = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return b;
+}
+
+async function verifyEntitlement(token, jwk) {
+  try {
+    const [p, sig] = String(token).split('.');
+    if (!p || !sig || !jwk) return null;
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, b64urlToBytes(sig), new TextEncoder().encode(p));
+    if (!ok) return null;
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(p)));
+    if (payload.exp && payload.exp < Date.now()) return null;
+    return payload;
+  } catch (e) { return null; }
+}
+
+// Fetch a fresh signed entitlement and verify it locally. A tampered storage flag
+// has no valid signature, so it resolves to 'free'. If the server is unreachable
+// but we verified recently, keep the prior plan until the grace window lapses.
+async function refreshEntitlement() {
+  const state = await HB.get();
+  const a = state.account;
+  if (!a || !a.userToken) return { ok: false, error: 'no-account' };
+  const base = String(a.serverUrl || '').replace(/\/+$/, '');
+  let jwk = a.pubkeyJwk;
+  try { if (!jwk) { const r = await (await fetch(base + '/api/entitlement/pubkey')).json(); if (r.ok) jwk = r.jwk; } } catch (e) { /* offline */ }
+  let token = null;
+  try { const s = await (await fetch(base + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + a.userToken } })).json(); if (s.ok) token = s.entitlement; } catch (e) { /* offline */ }
+
+  let plan = 'free', verifiedAt = null;
+  if (token && jwk) { const payload = await verifyEntitlement(token, jwk); if (payload) { plan = payload.plan; verifiedAt = Date.now(); } }
+  if (!verifiedAt && a.verifiedAt && (Date.now() - a.verifiedAt < ENTITLEMENT_GRACE)) { plan = a.plan || 'free'; verifiedAt = a.verifiedAt; }
+
+  const account = Object.assign({}, a, { plan, entitlement: token || a.entitlement, pubkeyJwk: jwk || a.pubkeyJwk, verifiedAt });
+  await HB.set({ account });
+  return { ok: true, plan, verified: !!verifiedAt };
+}
+
 /* ---------------- lifecycle ---------------- */
 
 async function ensureAlarms() {
   await chrome.alarms.create(WATCHDOG_ALARM, { periodInMinutes: 0.5 });
+  await chrome.alarms.create(ENTITLEMENT_ALARM, { periodInMinutes: 60 });
   const state = await HB.get();
   if (HB.isManaged(state)) await chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 0.5 });
 }
@@ -218,6 +267,7 @@ async function ensureAlarms() {
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === WATCHDOG_ALARM) verifyAndHeal();
   else if (alarm.name === SYNC_ALARM) syncManaged();
+  else if (alarm.name === ENTITLEMENT_ALARM) refreshEntitlement();
   else if (alarm.name.startsWith(REBLOCK_PREFIX)) reblock(alarm.name.slice(REBLOCK_PREFIX.length));
 });
 
@@ -234,6 +284,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await ensureAlarms();
   const state = await HB.get();
   if (HB.isManaged(state)) await syncManaged(); else await applyRules();
+  refreshEntitlement();
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -253,6 +304,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'selfGrantManaged': return sendResponse(await selfGrantManaged(msg.domain, msg.reason));
         case 'telemetry': await telemetry(msg.domain, msg.event); return sendResponse({ ok: true });
         case 'applyRules': await applyRules(); return sendResponse({ ok: true });
+        case 'refreshEntitlement': return sendResponse(await refreshEntitlement());
         default: return sendResponse({ ok: false, error: 'unknown' });
       }
     } catch (e) {

@@ -37,6 +37,7 @@ body {
 .billMetric .m .v { font-size: 20px; font-weight: 500; margin-top: 4px; }
 .pill.active { background: #10361f; color: var(--clear); }
 .pill.inactive { background: #4A1B0C; color: var(--redline); }
+.cbanner { margin: 12px 26px 0; background: #10361f; border: 0.5px solid var(--clear); color: var(--clear); border-radius: 10px; padding: 11px 14px; font-size: 14px; }
 .loginCard label { display: block; font-size: 13px; color: var(--ash); margin: 12px 0 6px; }
 
 input, select {
