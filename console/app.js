@@ -267,9 +267,12 @@
         '</div>' +
         '<div class="rowFields" style="align-items:flex-end"><div class="field"><label>Change seats</label>' +
         '<input id="bill_seats" class="smallInput" type="number" min="3" value="' + s.seats + '" /></div>' +
-        '<button id="bill_update" class="primary" style="width:auto;margin:0 0 16px">Update &amp; pay</button>' +
+        '<button id="bill_update" class="primary" style="width:auto;margin:0 0 16px">Update seats</button>' +
         '<button id="bill_cancel" class="ghost" style="margin:0 0 16px">Cancel subscription</button></div>';
-      $('#bill_update').addEventListener('click', () => checkout(+$('#bill_seats').value));
+      $('#bill_update').addEventListener('click', async () => {
+        const r = await api('/billing/seats', { method: 'POST', body: JSON.stringify({ seats: +$('#bill_seats').value }) });
+        if (r.ok) refresh(); else alert(r.error || 'Update failed');
+      });
       $('#bill_cancel').addEventListener('click', async () => { await api('/billing/cancel', { method: 'POST' }); refresh(); });
     } else {
       el.billingCard.innerHTML =

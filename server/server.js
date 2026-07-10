@@ -329,6 +329,13 @@ async function api(req, res, pathname) {
       const o = reqOrg(adminRec);
       return send(res, 200, { ok: true, kind, status: o.subscriptionStatus, active: billing.orgActive(o), seats: o.seats, plan: o.plan, currentPeriodEnd: o.currentPeriodEnd });
     }
+    if (method === 'POST' && seg[1] === 'seats') {
+      if (!adminRec) return send(res, 403, { ok: false, error: 'admin only' });
+      const body = await readBody(req);
+      const o = reqOrg(adminRec);
+      if (!billing.orgActive(o)) return send(res, 400, { ok: false, error: 'subscribe first' });
+      return send(res, 200, await billing.updateSeats(adminRec.orgId, body.seats));
+    }
     if (method === 'POST' && seg[1] === 'cancel') {
       if (userRec) billing.applyEntitlement('consumer', userRec.id, 'free', 1);
       else { const o = reqOrg(adminRec); o.subscriptionStatus = 'canceled'; db.save(); }

@@ -7,6 +7,10 @@ Living punch list. **[Me]** = buildable with no accounts. **[You→Me]** = you p
 - [x] **[Me]** Server signs entitlements (ECDSA P-256); the extension verifies the signature with the server's public key. A flipped `chrome.storage` flag has no valid signature → treated as free. Closes the soft-paywall.
 - *Note: a determined user can still patch the extension's own code — that's the irreducible ceiling for any client-side consumer paywall. This raises the bar from "edit a flag" to "patch and re-sign," which is the standard consumer bar.*
 
+## Billing hardening ✅ DONE
+- [x] **[Me]** Live Stripe verified — real `cs_test` Checkout Sessions for both plans ($9/mo consumer, $4/seat team).
+- [x] **[Me]** Persist Stripe customer + subscription ids (reconciliation + Portal-ready); idempotency keys on session create; webhook replay protection (5-min timestamp tolerance); seat changes update the subscription quantity (auto-prorated) instead of a new checkout.
+
 ## Gate 2 — Live payments (Stripe)
 - [ ] **[You · ~10 min]** Create a Stripe account; copy the **test** secret key (`sk_test_…`).
 - [ ] **[You · ~5 min]** Add a webhook → `…/api/stripe/webhook`; copy its signing secret (`whsec_…`). For local testing: `stripe listen --forward-to localhost:8787/api/stripe/webhook`.

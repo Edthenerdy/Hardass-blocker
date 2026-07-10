@@ -94,14 +94,55 @@ async function stripeCheckout({ kind, refId, plan, seats, cfg, origin }) {
   p.set('metadata[refId]', refId);
   p.set('metadata[plan]', plan);
   p.set('metadata[seats]', String(seats));
-  const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + process.env.STRIPE_SECRET_KEY, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: p
-  });
-  const j = await res.json();
+  const j = await stripeReq('POST', '/v1/checkout/sessions', p, crypto.randomUUID());
   if (j.error) throw new Error(j.error.message);
   return { url: j.url, id: j.id, simulated: false };
+}
+
+// Minimal Stripe REST helper (no SDK). idempotencyKey guards against duplicate
+// creates on retry; Stripe's own libraries do exactly this per request.
+async function stripeReq(method, pathName, params, idempotencyKey) {
+  const headers = { 'Authorization': 'Bearer ' + process.env.STRIPE_SECRET_KEY };
+  if (params) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+  const res = await fetch('https://api.stripe.com' + pathName, { method, headers, body: params || undefined });
+  return res.json();
+}
+
+function findOrgBySub(subId) { return (db.get().orgs || []).find(o => o.stripeSubscriptionId === subId); }
+function findUserBySub(subId) { return (db.get().users || []).find(u => u.stripeSubscriptionId === subId); }
+
+function persistStripeIds(kind, refId, customer, subscription) {
+  const data = db.get();
+  const rec = kind === 'team' ? (data.orgs || []).find(o => o.id === refId) : (data.users || []).find(u => u.id === refId);
+  if (!rec) return;
+  if (customer) rec.stripeCustomerId = customer;
+  if (subscription) rec.stripeSubscriptionId = subscription;
+  db.save();
+}
+
+// Change seat count on an active team subscription: live Stripe updates the
+// subscription item quantity (auto-prorated); simulated just updates locally.
+async function updateSeats(refId, seats) {
+  const cfg = PLANS.team.team_monthly;
+  seats = normSeats('team', cfg, seats);
+  const o = (db.get().orgs || []).find(x => x.id === refId);
+  if (!o) return { ok: false, error: 'no org' };
+  if (useStripe() && o.stripeSubscriptionId) {
+    const sub = await stripeReq('GET', '/v1/subscriptions/' + o.stripeSubscriptionId);
+    if (sub.error) return { ok: false, error: sub.error.message };
+    const itemId = sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].id;
+    if (!itemId) return { ok: false, error: 'no subscription item' };
+    const p = new URLSearchParams();
+    p.set('items[0][id]', itemId);
+    p.set('items[0][quantity]', String(seats));
+    p.set('proration_behavior', 'create_prorations');
+    const upd = await stripeReq('POST', '/v1/subscriptions/' + o.stripeSubscriptionId, p);
+    if (upd.error) return { ok: false, error: upd.error.message };
+  }
+  o.seats = seats;
+  db.save();
+  return { ok: true, seats };
 }
 
 // Verify + handle a real Stripe webhook. Returns {ok}. Signature check runs when
@@ -110,20 +151,33 @@ function handleStripeWebhook(rawBody, sigHeader) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (secret) {
     const parts = Object.fromEntries(String(sigHeader || '').split(',').map(kv => kv.split('=')));
+    // Replay protection: reject signatures whose timestamp is outside a 5-min window.
+    const ts = parseInt(parts.t, 10);
+    if (!ts || Math.abs(Date.now() / 1000 - ts) > 300) return { ok: false, error: 'timestamp outside tolerance' };
     const signed = crypto.createHmac('sha256', secret).update(parts.t + '.' + rawBody).digest('hex');
-    if (!parts.v1 || !crypto.timingSafeEqual(Buffer.from(signed), Buffer.from(parts.v1))) {
+    if (!parts.v1 || parts.v1.length !== signed.length || !crypto.timingSafeEqual(Buffer.from(signed), Buffer.from(parts.v1))) {
       return { ok: false, error: 'bad signature' };
     }
   }
   let event;
   try { event = JSON.parse(rawBody); } catch { return { ok: false, error: 'bad json' }; }
-  const obj = event.data && event.data.object;
-  if ((event.type === 'checkout.session.completed' || event.type === 'invoice.paid') && obj && obj.metadata) {
-    const m = obj.metadata;
+  const obj = (event.data && event.data.object) || {};
+
+  if (event.type === 'checkout.session.completed') {
+    const m = obj.metadata || {};
     applyEntitlement(m.kind, m.refId, m.plan, parseInt(m.seats, 10) || 1);
-  } else if (event.type === 'customer.subscription.deleted' && obj && obj.metadata && obj.metadata.kind === 'team') {
-    const o = (db.get().orgs || []).find(x => x.id === obj.metadata.refId);
+    persistStripeIds(m.kind, m.refId, obj.customer, obj.subscription);
+  } else if (event.type === 'invoice.paid') {
+    // Renewal — find the record by its subscription id and keep it active.
+    const subId = obj.subscription;
+    const o = findOrgBySub(subId); const u = findUserBySub(subId);
+    if (o) { o.subscriptionStatus = 'active'; o.currentPeriodEnd = Date.now() + 30 * 24 * 3600 * 1000; db.save(); }
+    else if (u) applyEntitlement('consumer', u.id, 'pro_monthly', 1);
+  } else if (event.type === 'customer.subscription.deleted') {
+    const subId = obj.id;
+    const o = findOrgBySub(subId); const u = findUserBySub(subId);
     if (o) { o.subscriptionStatus = 'canceled'; db.save(); }
+    else if (u) applyEntitlement('consumer', u.id, 'free', 1);
   }
   return { ok: true };
 }
@@ -138,5 +192,5 @@ function orgActive(org) {
 
 module.exports = {
   PLANS, useStripe, createCheckout, completeSimCheckout, getSimCheckout,
-  handleStripeWebhook, applyEntitlement, consumerStatus, orgActive
+  handleStripeWebhook, applyEntitlement, consumerStatus, orgActive, updateSeats
 };
