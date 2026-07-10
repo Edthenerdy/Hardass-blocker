@@ -1,6 +1,7 @@
 importScripts('common.js');
 
 const REBLOCK_PREFIX = 'reblock:';
+const REMOVE_PREFIX = 'finalizeremove:';
 const SYNC_ALARM = 'syncManaged';
 const WATCHDOG_ALARM = 'watchdog';
 const ENTITLEMENT_ALARM = 'entitlement';
@@ -88,17 +89,44 @@ async function addBlock(rawDomain) {
   return { ok: true, domain };
 }
 
+// Removing a site does NOT grant instant access. It starts a mandatory removal
+// cooldown during which the site STAYS blocked; only when the timer elapses is
+// the site actually removed. This is the hard block — you can't just open the
+// popup, hit remove, and get in.
 async function removeBlock(rawDomain) {
   const state = await HB.get();
   if (HB.isManaged(state) && state.policy && state.policy.enforcement === 'locked') return { ok: false, error: 'managed' };
   const domain = HB.normalizeDomain(rawDomain);
-  if (!state.blocklist.some(b => b.domain === domain)) return { ok: true };
+  if (!state.blocklist.some(b => b.domain === domain)) return { ok: true, removed: true };
+  const existing = state.pendingRemovals[domain];
+  if (existing && existing > Date.now()) return { ok: true, pending: true, removeAt: existing };
+  const removeAt = Date.now() + state.settings.cooldownMinutes * 60000;
+  state.pendingRemovals[domain] = removeAt;
+  await HB.set({ pendingRemovals: state.pendingRemovals });
+  // Deliberately do NOT touch the DNR rule — the site remains blocked.
+  await chrome.alarms.create(REMOVE_PREFIX + domain, { when: removeAt });
+  return { ok: true, pending: true, removeAt };
+}
+
+// Fires when the removal cooldown elapses — only now is the site truly removed.
+async function finalizeRemove(domain) {
+  const state = await HB.get();
   state.blocklist = state.blocklist.filter(b => b.domain !== domain);
   delete state.cooldowns[domain];
   delete state.allowances[domain];
+  delete state.pendingRemovals[domain];
   await chrome.alarms.clear(REBLOCK_PREFIX + domain);
-  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances });
+  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances, pendingRemovals: state.pendingRemovals });
   await applyRules();
+}
+
+// Cancel a pending removal — the site simply stays blocked.
+async function cancelRemoval(rawDomain) {
+  const domain = HB.normalizeDomain(rawDomain);
+  const state = await HB.get();
+  delete state.pendingRemovals[domain];
+  await chrome.alarms.clear(REMOVE_PREFIX + domain);
+  await HB.set({ pendingRemovals: state.pendingRemovals });
   return { ok: true };
 }
 
@@ -268,6 +296,7 @@ chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === WATCHDOG_ALARM) verifyAndHeal();
   else if (alarm.name === SYNC_ALARM) syncManaged();
   else if (alarm.name === ENTITLEMENT_ALARM) refreshEntitlement();
+  else if (alarm.name.startsWith(REMOVE_PREFIX)) finalizeRemove(alarm.name.slice(REMOVE_PREFIX.length));
   else if (alarm.name.startsWith(REBLOCK_PREFIX)) reblock(alarm.name.slice(REBLOCK_PREFIX.length));
 });
 
@@ -294,6 +323,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'getState': return sendResponse({ ok: true, state: await HB.get() });
         case 'addBlock': return sendResponse(await addBlock(msg.domain));
         case 'removeBlock': return sendResponse(await removeBlock(msg.domain));
+        case 'cancelRemoval': return sendResponse(await cancelRemoval(msg.domain));
         case 'startCooldown': return sendResponse(await startCooldown(msg.domain));
         case 'grantAllowance': return sendResponse(await grantAllowance(msg.domain, msg.reason));
         case 'enrollTeam': return sendResponse(await enrollTeam(msg.serverUrl, msg.code, msg.deviceName));

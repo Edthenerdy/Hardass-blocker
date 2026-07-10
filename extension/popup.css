@@ -125,3 +125,4 @@ button {
 
 .list .remove.confirm { color: var(--redline); border-color: var(--redline); }
 .list .status.managed { color: var(--redline); }
+.list .status.removing { color: var(--amber); }

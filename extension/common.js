@@ -10,6 +10,7 @@ const HB = {
     allowances: {},
     cooldowns: {},
     relapseLog: [],
+    pendingRemovals: {},
     team: null,
     policy: null,
     account: null
