@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "serverUrl": {
+      "type": "string",
+      "title": "Deadbolt server URL",
+      "description": "Base URL of the team's Deadbolt server, e.g. https://team.deadbolt.app"
+    },
+    "enrollmentCode": {
+      "type": "string",
+      "title": "Enrollment code",
+      "description": "The team/group enrollment code the device joins with, e.g. NSD-4K9-QX2"
+    },
+    "deviceName": {
+      "type": "string",
+      "title": "Device name",
+      "description": "Optional label shown in the admin console for this device."
+    }
+  }
+}

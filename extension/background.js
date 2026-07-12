@@ -204,6 +204,33 @@ async function telemetry(domain, event) {
   catch (e) { /* offline: ignore */ }
 }
 
+/* ---------------- zero-touch enrollment (managed config) ---------------- */
+
+// When the extension is force-installed by enterprise policy, the same policy
+// can push { serverUrl, enrollmentCode, deviceName } as 3rd-party managed
+// configuration (see managed_schema.json + enterprise-policy/). We read it here
+// and enrol the device automatically — no user input, no options screen. This
+// is what makes "deploy before lunch, no IT" real.
+async function readManagedConfig() {
+  try {
+    const cfg = await chrome.storage.managed.get(['serverUrl', 'enrollmentCode', 'deviceName']);
+    return cfg || {};
+  } catch (e) {
+    return {}; // no managed storage available (unmanaged install) — treat as none
+  }
+}
+
+async function autoEnrollFromManagedConfig() {
+  const cfg = await readManagedConfig();
+  if (!cfg.serverUrl || !cfg.enrollmentCode) return { ok: false, error: 'no-config' };
+  const state = await HB.get();
+  // Already enrolled to this server — nothing to do.
+  if (HB.isManaged(state) && state.team && baseUrl(state.team) === baseUrl(cfg)) return { ok: true, already: true };
+  // Enrolled elsewhere but policy now points at a different server — re-enrol.
+  if (HB.isManaged(state)) { await HB.set({ team: null, policy: null }); }
+  return enrollTeam(cfg.serverUrl, cfg.enrollmentCode, cfg.deviceName || 'Managed device');
+}
+
 /* ---------------- lifecycle ---------------- */
 
 async function ensureAlarms() {
@@ -219,7 +246,9 @@ chrome.alarms.onAlarm.addListener(alarm => {
 });
 
 chrome.runtime.onInstalled.addListener(async details => {
+  await autoEnrollFromManagedConfig(); // no-op unless policy pushed a config
   const state = await HB.get();
+  // Only seed the individual starter blocklist for a genuinely unmanaged install.
   if (details.reason === 'install' && !HB.isManaged(state)) {
     for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) await addBlock(d);
   }
@@ -228,9 +257,15 @@ chrome.runtime.onInstalled.addListener(async details => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+  await autoEnrollFromManagedConfig(); // pick up policy pushed since last run
   await ensureAlarms();
   const state = await HB.get();
   if (HB.isManaged(state)) await syncManaged(); else await applyRules();
+});
+
+// Admin pushes/updates the managed config while the browser is running → enrol live.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'managed') autoEnrollFromManagedConfig();
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

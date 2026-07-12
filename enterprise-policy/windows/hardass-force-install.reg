@@ -20,6 +20,14 @@ Windows Registry Editor Version 5.00
 ; Prevent the user disabling Developer mode extensions / side-loading around it.
 "ExtensionDeveloperModeSettings"=dword:00000000
 
+; Zero-touch enrolment: push the team's server URL + enrollment code as 3rd-party
+; managed configuration. The extension reads these via chrome.storage.managed and
+; self-enrols on first launch — no user input, no options screen. Replace the two
+; values below with the tenant's own before deploying.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\mdfcmhkfkelkdhjbjddmkmjkmobijbgc\policy]
+"serverUrl"="https://team.deadbolt.app"
+"enrollmentCode"="NSD-4K9-QX2"
+
 ; --- For Microsoft Edge, use the same values under this key instead: ---
 ; [HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallForcelist]
 ; "1"="mdfcmhkfkelkdhjbjddmkmjkmobijbgc;https://edge.microsoft.com/extensionwebstorebase/v1/crx"

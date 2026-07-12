@@ -16,6 +16,9 @@
   "background": {
     "service_worker": "background.js"
   },
+  "storage": {
+    "managed_schema": "managed_schema.json"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Hardass Blocker"

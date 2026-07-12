@@ -4,5 +4,15 @@
     "mdfcmhkfkelkdhjbjddmkmjkmobijbgc;https://clients2.google.com/service/update2/crx"
   ],
   "IncognitoModeAvailability": 1,
-  "ExtensionDeveloperModeSettings": 0
+  "ExtensionDeveloperModeSettings": 0,
+
+  "_comment_3rdparty": "Zero-touch enrolment: push the team's server URL + enrollment code straight into the extension so it self-enrols on first launch with no user input. Replace the two values below with the tenant's own. Read by autoEnrollFromManagedConfig() via chrome.storage.managed (schema: extension/managed_schema.json).",
+  "3rdparty": {
+    "extensions": {
+      "mdfcmhkfkelkdhjbjddmkmjkmobijbgc": {
+        "serverUrl": "https://team.deadbolt.app",
+        "enrollmentCode": "NSD-4K9-QX2"
+      }
+    }
+  }
 }
