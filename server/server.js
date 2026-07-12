@@ -194,6 +194,10 @@ async function api(req, res, pathname) {
     // POST /api/device/requests {domain, reason, requestedMin}
     if (method === 'POST' && seg[1] === 'requests') {
       const body = await readBody(req);
+      const g = groupFor(device);
+      // Access requests only make sense under admin-approval. Cooldown groups
+      // self-serve via /selfgrant; 'none' groups forbid unblocking entirely.
+      if (g.policy.unblockMode !== 'admin-approval') return send(res, 400, { ok: false, error: 'unblock not allowed for this policy' });
       const domain = normalizeDomain(body.domain);
       if (!domain) return send(res, 400, { ok: false, error: 'no domain' });
       const existing = data.requests.find(r => r.deviceId === device.id && r.domain === domain && r.status === 'pending');
@@ -236,6 +240,7 @@ async function api(req, res, pathname) {
     const pending = data.requests.filter(r => r.status === 'pending').length;
     return send(res, 200, {
       ok: true,
+      org: { name: data.org.name, seats: data.org.seats },
       devicesOnline: online,
       devicesEnrolled: data.devices.length,
       seats: data.org.seats,

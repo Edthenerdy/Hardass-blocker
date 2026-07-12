@@ -11,6 +11,11 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute must always win, even on elements that set an explicit
+   display (e.g. .center uses display:flex). Without this, a class-based display
+   overrides [hidden] and "hidden" screens stay painted on top. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--ink);

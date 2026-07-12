@@ -11,6 +11,10 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute must always win over any class-based display, so
+   toggling el.hidden reliably shows/hides screens (e.g. #pendingDot, #app). */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--ink);

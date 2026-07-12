@@ -69,6 +69,9 @@
   async function loadDashboard() {
     const d = await api('/dashboard');
     if (!d.ok) return;
+    // Keep the header org/seats correct on fresh login AND after a reload
+    // (boot re-enters without the login response, so rely on the dashboard).
+    if (d.org) el.orgName.textContent = d.org.name + ' · ' + d.org.seats + ' seats';
     const cards = [
       ['Devices online', d.devicesOnline + ' / ' + d.seats, ''],
       ['Blocks enforced today', d.blocksToday, ''],
