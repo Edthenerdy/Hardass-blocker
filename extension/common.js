@@ -1,3 +1,24 @@
+// ---------------------------------------------------------------------------
+// PER-DEVICE INVARIANT (belt-and-suspenders guard)
+//
+// The individual product's state is intentionally PER DEVICE: each install
+// keeps its own blocklist, settings, cooldowns and relapse history, and NOTHING
+// syncs across a user's other machines. That is a deliberate product decision,
+// not an accident — a block you set on your work laptop must not silently
+// reappear (or vanish) on your home PC.
+//
+// This is enforced by using chrome.storage.LOCAL, which Chrome never syncs.
+// Do NOT switch this to chrome.storage.sync: that API mirrors state across every
+// device signed into the same Google account and would break the per-device
+// guarantee. All state access below MUST go through PER_DEVICE_STORE so this
+// choice lives in exactly one place and can only be changed on purpose.
+//
+// (The one intentional exception to "per device" is team/managed mode, where an
+// admin deliberately pushes one policy from the server — see HB.isManaged().
+// That path pulls policy over the network; it never routes through storage.sync.)
+// ---------------------------------------------------------------------------
+const PER_DEVICE_STORE = chrome.storage.local;
+
 const HB = {
   DEFAULTS: {
     settings: {
@@ -40,7 +61,8 @@ const HB = {
   ],
 
   async get() {
-    const stored = await chrome.storage.local.get(null);
+    // Per-device only — see PER_DEVICE_STORE invariant above.
+    const stored = await PER_DEVICE_STORE.get(null);
     const base = structuredClone(HB.DEFAULTS);
     return {
       ...base,
@@ -54,7 +76,8 @@ const HB = {
   },
 
   async set(patch) {
-    await chrome.storage.local.set(patch);
+    // Per-device only — see PER_DEVICE_STORE invariant above.
+    await PER_DEVICE_STORE.set(patch);
   },
 
   normalizeDomain(raw) {
