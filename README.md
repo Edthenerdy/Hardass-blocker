@@ -2,6 +2,8 @@
 
 **The blocker you can't talk your way out of.**
 
+> **Naming:** the individual product now ships on the Chrome Web Store as **Holdfast** (see `docs/`). This repo keeps "Hardass Blocker" as its working name; the SME/enterprise tier is **Deadbolt for Teams**. A full project rename to Holdfast is optional — tracked in `docs/LAUNCH-PROGRESS.md`.
+
 Every website blocker fails at the same moment — the one-click "just disable it for a sec" when self-control is weakest. Hardass Blocker makes *unblocking* deliberately hard: a mandatory cooldown, a written reason, and a look at your own relapse history before you're let back in.
 
 This repo contains the concept, the brand, and a working proof-of-concept.

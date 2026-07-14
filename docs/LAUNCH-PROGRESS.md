@@ -19,6 +19,15 @@
 - ✅ Pushed as **PR #4**.
 - ✅ Trademark scan (preliminary): "Holdfast" looks open in software class 9/42; domains `.com`/`holdfastapp.com`/`getholdfast.com` taken (photo app + others), **`holdfast.app` available**.
 
+## ✅ Done second night (Claude)
+- ✅ **Adversarial QA of the extension** — mock-Chrome test suite (`test/extension.test.mjs`, 20/20) exercising block/cooldown/allowance/re-block/self-heal. Core logic is solid.
+- ✅ **Fixed 2 XSS sinks** — `blocked.js` + `options.js` interpolated server policy data raw into innerHTML (managed-mode only; now escaped to match popup.js).
+- ✅ **First-run onboarding** — `extension/welcome.html` + `welcome.js`; opens on install, explains the Cooldown, lets the user adjust the starter blocklist. No new permissions.
+- ✅ **Demo GIF** — `docs/store-assets/holdfast-demo.gif` (countdown → reason → unblock → re-blocks).
+- ✅ **Marquee promo** — `docs/store-assets/promo-marquee.png` (1400×560).
+- ✅ **README naming note** aligning the shipped consumer name to Holdfast.
+- All committed to `holdfast-launch-prep` (PR #4). Extension changes kept on the branch for your review — not merged.
+
 ## ⏳ Ready for you, in order (human-gated — I can't do these)
 1. ⏳ **Merge the PRs** you're happy with. Suggested order: **#2** (device-client fix) → **#1** (per-device guard) → **#3** (managed enrolment) → **#4** (Holdfast rebrand). #4 is the one that matters for this launch.
 2. ⏳ **Enable GitHub Pages** (Settings → Pages → `/docs`) → gives you the privacy-policy + landing URLs.
