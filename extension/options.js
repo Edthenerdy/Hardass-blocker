@@ -26,6 +26,8 @@
     teamMsg: document.getElementById('teamMsg')
   };
 
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
   function fmtDate(ts) {
     const d = new Date(ts);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
@@ -41,10 +43,10 @@
       const p = state.policy || {};
       const locked = p.enforcement === 'locked';
       team.info.innerHTML =
-        '<div class="note" style="margin-bottom:10px">Managed by <strong style="color:var(--bone)">' + (p.org || '') + '</strong> · group <strong style="color:var(--bone)">' + (p.group || '') + '</strong></div>' +
+        '<div class="note" style="margin-bottom:10px">Managed by <strong style="color:var(--bone)">' + esc(p.org || '') + '</strong> · group <strong style="color:var(--bone)">' + esc(p.group || '') + '</strong></div>' +
         '<div class="log"><table class="log"><tbody>' +
-        '<tr><td>Enforcement</td><td>' + (p.enforcement || '') + '</td></tr>' +
-        '<tr><td>Unblock mode</td><td>' + (p.unblockMode || '') + '</td></tr>' +
+        '<tr><td>Enforcement</td><td>' + esc(p.enforcement || '') + '</td></tr>' +
+        '<tr><td>Unblock mode</td><td>' + esc(p.unblockMode || '') + '</td></tr>' +
         '<tr><td>Blocked sites</td><td>' + ((p.blocklist || []).length) + '</td></tr>' +
         '</tbody></table></div>';
       team.leaveBtn.disabled = locked;
