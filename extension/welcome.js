@@ -41,7 +41,19 @@
 
   el.add.addEventListener('click', add);
   el.site.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
-  el.start.addEventListener('click', () => window.close());
+  // Chrome won't let window.close() close a tab it didn't open (welcome is opened
+  // via chrome.tabs.create), so close the current tab through the tabs API,
+  // falling back to window.close() where that isn't available.
+  el.start.addEventListener('click', () => {
+    try {
+      if (chrome.tabs && chrome.tabs.getCurrent) {
+        chrome.tabs.getCurrent(tab => {
+          if (tab && tab.id != null && chrome.tabs.remove) chrome.tabs.remove(tab.id);
+          else window.close();
+        });
+      } else window.close();
+    } catch (e) { window.close(); }
+  });
 
   render();
 })();

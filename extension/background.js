@@ -120,7 +120,8 @@ async function grantAllowance(rawDomain, reason) {
   const expiresAt = Date.now() + mins * 60000;
   state.allowances[domain] = expiresAt;
   delete state.cooldowns[domain];
-  state.relapseLog.push({ domain, ts: Date.now(), reason: reason.trim(), grantedMin: mins });
+  state.relapseLog.push({ domain, ts: Date.now(), reason: reason.trim().slice(0, 300), grantedMin: mins });
+  if (state.relapseLog.length > 500) state.relapseLog = state.relapseLog.slice(-500); // bound local storage
   await HB.set({ allowances: state.allowances, cooldowns: state.cooldowns, relapseLog: state.relapseLog });
   await applyRules();
   await chrome.alarms.create(REBLOCK_PREFIX + domain, { when: expiresAt });
