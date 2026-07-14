@@ -19,33 +19,6 @@
     </header>
 
     <section class="card">
-      <h2>Team (managed mode)</h2>
-      <div id="teamUnmanaged">
-        <p class="note">Enrol this browser into your organization's Deadbolt for Teams policy. Your admin then controls the blocklist — and, if locked, you can't disable it.</p>
-        <div class="field">
-          <label for="serverUrl">Server URL</label>
-          <input id="serverUrl" type="text" value="http://localhost:8787" />
-        </div>
-        <div class="field">
-          <label for="enrollCode">Enrollment code</label>
-          <input id="enrollCode" type="text" placeholder="NSD-4K9-QX2" />
-        </div>
-        <div class="field">
-          <label for="deviceName">Device name</label>
-          <input id="deviceName" type="text" placeholder="Reception-PC-01" />
-        </div>
-        <button id="enrollBtn" class="primary">Enrol this device</button>
-        <span id="enrollMsg" class="saveMsg"></span>
-      </div>
-      <div id="teamManaged" hidden>
-        <div id="teamInfo"></div>
-        <button id="syncBtn" class="ghost">Sync now</button>
-        <button id="leaveBtn" class="ghost">Leave team</button>
-        <span id="teamMsg" class="saveMsg"></span>
-      </div>
-    </section>
-
-    <section class="card">
       <h2>Personal rules</h2>
       <p class="note">Used when this device is <em>not</em> managed by a team.</p>
       <div class="field">
@@ -82,6 +55,33 @@
         <p id="logEmpty" class="empty">No relapses logged yet. Keep it that way.</p>
       </div>
       <button id="clearLogBtn" class="ghost">Clear history</button>
+    </section>
+
+    <section class="card">
+      <h2>Team (managed mode)</h2>
+      <p class="note">Optional — ignore this unless your workplace asked you to enrol. It lets an admin manage the blocklist centrally (the Deadbolt for Teams tier); if locked, you can't disable it.</p>
+      <div id="teamUnmanaged">
+        <div class="field">
+          <label for="serverUrl">Server URL</label>
+          <input id="serverUrl" type="text" placeholder="https://your-team-server" />
+        </div>
+        <div class="field">
+          <label for="enrollCode">Enrollment code</label>
+          <input id="enrollCode" type="text" placeholder="NSD-4K9-QX2" />
+        </div>
+        <div class="field">
+          <label for="deviceName">Device name</label>
+          <input id="deviceName" type="text" placeholder="Reception-PC-01" />
+        </div>
+        <button id="enrollBtn" class="primary">Enrol this device</button>
+        <span id="enrollMsg" class="saveMsg"></span>
+      </div>
+      <div id="teamManaged" hidden>
+        <div id="teamInfo"></div>
+        <button id="syncBtn" class="ghost">Sync now</button>
+        <button id="leaveBtn" class="ghost">Leave team</button>
+        <span id="teamMsg" class="saveMsg"></span>
+      </div>
     </section>
   </main>
 

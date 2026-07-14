@@ -240,6 +240,9 @@
     el.timer.style.display = 'none';
     el.timerCap.textContent = 'This is how you keep a block a block.';
     el.stats.hidden = true;
+    // There's nothing to start here — a bypass hit isn't a blocked-site cooldown.
+    // The only sensible action is to go back.
+    el.startBtn.hidden = true;
   }
 
   /* ================= boot ================= */
