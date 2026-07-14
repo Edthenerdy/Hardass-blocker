@@ -222,6 +222,9 @@ chrome.runtime.onInstalled.addListener(async details => {
   const state = await HB.get();
   if (details.reason === 'install' && !HB.isManaged(state)) {
     for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) await addBlock(d);
+    // First-run: open the welcome page so the user understands the Cooldown
+    // and can adjust the starter blocklist. Individual installs only.
+    try { chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') }); } catch (e) { /* no tabs access */ }
   }
   await ensureAlarms();
   if (HB.isManaged(state)) await syncManaged(); else await applyRules();

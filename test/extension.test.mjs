@@ -35,7 +35,9 @@ const chrome = {
     onInstalled: { addListener: (fn) => { L.onInstalled = fn; } },
     onStartup: { addListener: (fn) => { L.onStartup = fn; } },
     onMessage: { addListener: (fn) => { L.onMessage = fn; } },
+    getURL: (p) => 'chrome-extension://test/' + p,
   },
+  tabs: { create: async () => {} },
 };
 
 const sandbox = { chrome, fetch: async () => ({ json: async () => ({}) }), console, structuredClone, setTimeout, clearTimeout, Date, Math, Set, Map, JSON, Object, Array, String, Number, encodeURIComponent, Promise, Error };
