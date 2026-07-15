@@ -169,3 +169,7 @@ button:active { transform: scale(0.99); }
 }
 
 .ghost:hover { color: var(--bone); }
+
+/* Long-domain + keyboard-focus hardening */
+h1, .sub { overflow-wrap: anywhere; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }

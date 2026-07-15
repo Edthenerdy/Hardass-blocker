@@ -77,15 +77,21 @@ button {
 }
 .ghost:hover { color: var(--redline); border-color: var(--redline); }
 
-.log { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.log { width: 100%; border-collapse: collapse; margin-top: 6px; table-layout: fixed; }
 .log th, .log td {
   text-align: left;
   font-size: 13px;
   padding: 8px 10px;
   border-bottom: 0.5px solid var(--steel);
   vertical-align: top;
+  overflow-wrap: anywhere;   /* long reasons wrap instead of blowing out the table */
+  word-break: break-word;
 }
+.log th:nth-child(1), .log td:nth-child(1) { width: 22%; }
+.log th:nth-child(2), .log td:nth-child(2) { width: 34%; }
 .log th { color: var(--ash); font-weight: 500; }
 .log td:nth-child(3) { color: var(--ash); }
 
 .empty { color: var(--ash); font-size: 13px; padding: 10px 0; }
+
+button:focus-visible, a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }

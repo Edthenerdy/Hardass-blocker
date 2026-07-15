@@ -45,5 +45,38 @@ All four re-rendered and visually confirmed. Unit suite 20/20 and journey suite
   and on for the enforced/team tier.
 
 ## Minor (nice-to-have, not blocking)
-- The popup's site input relies on placeholder text rather than a visible/aria
-  label. Low impact (placeholder is announced), worth an `aria-label` later.
+- ~~The popup's site input relies on placeholder text rather than a label.~~ Fixed in round 2 (aria-label added).
+
+---
+
+# Round 2 — edge content, responsive & accessibility
+
+Rendered stress states in headless Chromium: long domains, a full (10-item)
+blocklist, a long no-space reason, a long org name, the landing at 375px mobile,
+and the welcome page narrow. Render script: `render_stress.js`.
+
+## Fixed
+1. **Popup: long domain overlapped the Remove button** (text cut off as "Remo…").
+   The site text block now shrinks and wraps (`min-width:0; overflow-wrap:anywhere`)
+   and the Remove button holds its size (`flex-shrink:0`). Verified.
+2. **Options history: a long no-space reason blew the table out horizontally**
+   (page ballooned to ~3500px wide). Fixed with `table-layout:fixed`, bounded
+   column widths (22/34/44%), and `overflow-wrap:anywhere` on cells. Verified.
+3. **Keyboard focus was invisible on the dark theme.** Buttons had no focus
+   indicator. Added a clear `:focus-visible` ring (amber, 2–3px, offset) across
+   popup / blocked / options. Belt-and-suspenders `overflow-wrap` added to the
+   blocked page's headline + domain line too.
+4. **A11y label:** `aria-label` added to the popup and welcome "add site" inputs
+   (placeholders aren't reliable accessible names).
+
+## Verified good (no change needed)
+- **Popup with a full blocklist scrolls** (the list is capped at 240px with
+  `overflow-y:auto`) — no page blowout.
+- **Landing page is fully responsive at 375px** — cards stack, the 3-step grid
+  collapses to one column, no horizontal scroll.
+- **Managed banner** wraps a very long org/group name cleanly.
+- **Blocked page** wraps a long domain within its column.
+- **Colour contrast (computed, WCAG):** body text (bone/ink) ~17:1, muted
+  (ash/ink) ~7:1 (AAA), red accent ~5.4:1 and amber ~11:1 (both AA+). Passes.
+
+Both test suites still green after all changes (unit 20/20, journeys 24/24).
