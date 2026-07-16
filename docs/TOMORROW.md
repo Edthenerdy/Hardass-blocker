@@ -12,15 +12,13 @@ Your total time below ≈ **1.5–2 hours**, most of it the Web Store form + smo
 
 ## Do these in order
 
-**0. Reconcile the repo (~10 min) — do this first.**
-`main` now has extra work I didn't touch (`account/`, `Dockerfile`, `docker-compose.yml`,
-`tools/` — looks like the SaaS/backend track). My launch branches were cut off an
-older `main`. Skim `git log main`, and merge/rebase so PR #4 sits cleanly on top.
-Nothing in PR #4 touches those files, so it should be conflict-free — just confirm.
-
-**1. Merge the PRs (~5 min).** Suggested order: **#2** (device-client fix) → **#1**
-(per-device guard) → **#3** (managed enrolment) → **#4** (Holdfast launch + all UX/QA).
-#4 is the one that matters for this launch.
+**0–1. Repo reconciliation — DONE.** `main` is now the single canonical **Holdfast**
+source of truth: this session's tested consumer extension + tests + launch kit,
+layered over the backend/SaaS work (`account/`, `server/` billing, Docker) that was
+on the old `main`. The old `main` (Deadbolt-branded) is preserved at
+`archive/deadbolt-main`; all PRs are closed. Nothing to merge — just work off `main`.
+(A few feature branches remain with unique unmerged bits — see the branch note at the
+bottom; delete at will.)
 
 **2. Enable GitHub Pages (~2 min).** Repo → Settings → Pages → Deploy from branch →
 `main` / `/docs`. Gives you:
