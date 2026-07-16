@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Holdfast — Privacy Policy</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #0E0E10; color: #F4F1EC; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.6; }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1 { font-size: 30px; margin: 0 0 4px; }
+    h2 { font-size: 19px; margin: 34px 0 8px; color: #FF3B30; }
+    .muted { color: #9A9CA3; }
+    .lead { font-size: 17px; color: #cfd0d4; }
+    a { color: #FF3B30; }
+    code { background: #1B1C20; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+    ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+    hr { border: 0; border-top: 1px solid #33353B; margin: 32px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Holdfast — Privacy Policy</h1>
+    <p class="muted">Last updated: 13 July 2026</p>
+
+    <p class="lead">Holdfast is built to keep your data on your own device. In normal (individual) use, Holdfast collects <strong>no</strong> personal data, sends <strong>nothing</strong> to us or any third party, and has no analytics, trackers, or ads.</p>
+
+    <h2>What Holdfast stores, and where</h2>
+    <p>When you use Holdfast as an individual, everything it needs is stored <strong>locally on your device</strong> using the browser's <code>chrome.storage.local</code> API. That data never leaves your browser and is never transmitted to us. It includes:</p>
+    <ul>
+      <li>your blocklist (the sites you choose to block);</li>
+      <li>your settings (cooldown length, pass length, minimum reason length);</li>
+      <li>active cooldowns and time-boxed passes;</li>
+      <li>your relapse log (when you unblocked a site and the reason you typed).</li>
+    </ul>
+    <p>We — the developer — cannot see any of this. Uninstalling Holdfast removes it from your device.</p>
+
+    <h2>We do not collect or sell data</h2>
+    <ul>
+      <li>No personal or sensitive information is collected or transmitted to us.</li>
+      <li>No data is sold or shared with third parties.</li>
+      <li>No advertising, no analytics SDKs, no third-party tracking.</li>
+    </ul>
+
+    <h2>Permissions, and why Holdfast needs them</h2>
+    <ul>
+      <li><strong>Storage</strong> — to save your blocklist, settings, and history locally on your device.</li>
+      <li><strong>declarativeNetRequest</strong> — to redirect a site you have blocked to Holdfast's cooldown page. Holdfast defines rules; the browser enforces them without Holdfast reading your browsing.</li>
+      <li><strong>Alarms</strong> — to re-block a site automatically when a time-boxed pass expires, and to re-assert your rules if they are cleared.</li>
+      <li><strong>Host access (all sites)</strong> — required so a block can apply to any site you choose to add. Holdfast does not read, log, or transmit the pages you visit.</li>
+    </ul>
+
+    <hr />
+
+    <h2>Optional: managed (team) mode</h2>
+    <p>Holdfast can optionally be enrolled into an organization's own "Deadbolt for Teams" server by an administrator (or by your own choice). <strong>Only if you enrol</strong>, and only then, the extension communicates with the server URL your administrator configures — to fetch the policy set by your admin and to report blocked-attempt counts for compliance. That server is operated by your organization, under your organization's own privacy terms, not by us. If you never enrol in a team, none of this applies and Holdfast stays fully local.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, the "last updated" date above will change. Material changes will be noted in the extension's store listing.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about privacy? Email <a href="mailto:support@holdfast.app">support@holdfast.app</a>.</p>
+  </main>
+</body>
+</html>

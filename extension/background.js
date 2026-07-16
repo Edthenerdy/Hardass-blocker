@@ -1,11 +1,8 @@
 importScripts('common.js');
 
 const REBLOCK_PREFIX = 'reblock:';
-const REMOVE_PREFIX = 'finalizeremove:';
 const SYNC_ALARM = 'syncManaged';
 const WATCHDOG_ALARM = 'watchdog';
-const ENTITLEMENT_ALARM = 'entitlement';
-const ENTITLEMENT_GRACE = 3 * 24 * 60 * 60 * 1000;
 const MANAGED_BASE = 10000;
 const BYPASS_BASE = 20000;
 
@@ -80,53 +77,23 @@ async function addBlock(rawDomain) {
   const domain = HB.normalizeDomain(rawDomain);
   if (!domain) return { ok: false, error: 'empty' };
   if (state.blocklist.some(b => b.domain === domain)) return { ok: true, domain };
-  if (!HB.isManaged(state) && !HB.isPro(state) && state.blocklist.length >= HB.FREE_LIMIT) {
-    return { ok: false, error: 'free-limit' };
-  }
   state.blocklist.push({ domain, ruleId: nextRuleId(state), addedAt: Date.now() });
   await HB.set({ blocklist: state.blocklist });
   await applyRules();
   return { ok: true, domain };
 }
 
-// Removing a site does NOT grant instant access. It starts a mandatory removal
-// cooldown during which the site STAYS blocked; only when the timer elapses is
-// the site actually removed. This is the hard block — you can't just open the
-// popup, hit remove, and get in.
 async function removeBlock(rawDomain) {
   const state = await HB.get();
   if (HB.isManaged(state) && state.policy && state.policy.enforcement === 'locked') return { ok: false, error: 'managed' };
   const domain = HB.normalizeDomain(rawDomain);
-  if (!state.blocklist.some(b => b.domain === domain)) return { ok: true, removed: true };
-  const existing = state.pendingRemovals[domain];
-  if (existing && existing > Date.now()) return { ok: true, pending: true, removeAt: existing };
-  const removeAt = Date.now() + state.settings.cooldownMinutes * 60000;
-  state.pendingRemovals[domain] = removeAt;
-  await HB.set({ pendingRemovals: state.pendingRemovals });
-  // Deliberately do NOT touch the DNR rule — the site remains blocked.
-  await chrome.alarms.create(REMOVE_PREFIX + domain, { when: removeAt });
-  return { ok: true, pending: true, removeAt };
-}
-
-// Fires when the removal cooldown elapses — only now is the site truly removed.
-async function finalizeRemove(domain) {
-  const state = await HB.get();
+  if (!state.blocklist.some(b => b.domain === domain)) return { ok: true };
   state.blocklist = state.blocklist.filter(b => b.domain !== domain);
   delete state.cooldowns[domain];
   delete state.allowances[domain];
-  delete state.pendingRemovals[domain];
   await chrome.alarms.clear(REBLOCK_PREFIX + domain);
-  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances, pendingRemovals: state.pendingRemovals });
+  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances });
   await applyRules();
-}
-
-// Cancel a pending removal — the site simply stays blocked.
-async function cancelRemoval(rawDomain) {
-  const domain = HB.normalizeDomain(rawDomain);
-  const state = await HB.get();
-  delete state.pendingRemovals[domain];
-  await chrome.alarms.clear(REMOVE_PREFIX + domain);
-  await HB.set({ pendingRemovals: state.pendingRemovals });
   return { ok: true };
 }
 
@@ -153,7 +120,8 @@ async function grantAllowance(rawDomain, reason) {
   const expiresAt = Date.now() + mins * 60000;
   state.allowances[domain] = expiresAt;
   delete state.cooldowns[domain];
-  state.relapseLog.push({ domain, ts: Date.now(), reason: reason.trim(), grantedMin: mins });
+  state.relapseLog.push({ domain, ts: Date.now(), reason: reason.trim().slice(0, 300), grantedMin: mins });
+  if (state.relapseLog.length > 500) state.relapseLog = state.relapseLog.slice(-500); // bound local storage
   await HB.set({ allowances: state.allowances, cooldowns: state.cooldowns, relapseLog: state.relapseLog });
   await applyRules();
   await chrome.alarms.create(REBLOCK_PREFIX + domain, { when: expiresAt });
@@ -237,57 +205,10 @@ async function telemetry(domain, event) {
   catch (e) { /* offline: ignore */ }
 }
 
-/* ---------------- consumer entitlement (server-signed) ---------------- */
-
-function b64urlToBytes(s) {
-  s = s.replace(/-/g, '+').replace(/_/g, '/');
-  while (s.length % 4) s += '=';
-  const bin = atob(s);
-  const b = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
-  return b;
-}
-
-async function verifyEntitlement(token, jwk) {
-  try {
-    const [p, sig] = String(token).split('.');
-    if (!p || !sig || !jwk) return null;
-    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
-    const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, b64urlToBytes(sig), new TextEncoder().encode(p));
-    if (!ok) return null;
-    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(p)));
-    if (payload.exp && payload.exp < Date.now()) return null;
-    return payload;
-  } catch (e) { return null; }
-}
-
-// Fetch a fresh signed entitlement and verify it locally. A tampered storage flag
-// has no valid signature, so it resolves to 'free'. If the server is unreachable
-// but we verified recently, keep the prior plan until the grace window lapses.
-async function refreshEntitlement() {
-  const state = await HB.get();
-  const a = state.account;
-  if (!a || !a.userToken) return { ok: false, error: 'no-account' };
-  const base = String(a.serverUrl || '').replace(/\/+$/, '');
-  let jwk = a.pubkeyJwk;
-  try { if (!jwk) { const r = await (await fetch(base + '/api/entitlement/pubkey')).json(); if (r.ok) jwk = r.jwk; } } catch (e) { /* offline */ }
-  let token = null;
-  try { const s = await (await fetch(base + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + a.userToken } })).json(); if (s.ok) token = s.entitlement; } catch (e) { /* offline */ }
-
-  let plan = 'free', verifiedAt = null;
-  if (token && jwk) { const payload = await verifyEntitlement(token, jwk); if (payload) { plan = payload.plan; verifiedAt = Date.now(); } }
-  if (!verifiedAt && a.verifiedAt && (Date.now() - a.verifiedAt < ENTITLEMENT_GRACE)) { plan = a.plan || 'free'; verifiedAt = a.verifiedAt; }
-
-  const account = Object.assign({}, a, { plan, entitlement: token || a.entitlement, pubkeyJwk: jwk || a.pubkeyJwk, verifiedAt });
-  await HB.set({ account });
-  return { ok: true, plan, verified: !!verifiedAt };
-}
-
 /* ---------------- lifecycle ---------------- */
 
 async function ensureAlarms() {
   await chrome.alarms.create(WATCHDOG_ALARM, { periodInMinutes: 0.5 });
-  await chrome.alarms.create(ENTITLEMENT_ALARM, { periodInMinutes: 60 });
   const state = await HB.get();
   if (HB.isManaged(state)) await chrome.alarms.create(SYNC_ALARM, { periodInMinutes: 0.5 });
 }
@@ -295,8 +216,6 @@ async function ensureAlarms() {
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === WATCHDOG_ALARM) verifyAndHeal();
   else if (alarm.name === SYNC_ALARM) syncManaged();
-  else if (alarm.name === ENTITLEMENT_ALARM) refreshEntitlement();
-  else if (alarm.name.startsWith(REMOVE_PREFIX)) finalizeRemove(alarm.name.slice(REMOVE_PREFIX.length));
   else if (alarm.name.startsWith(REBLOCK_PREFIX)) reblock(alarm.name.slice(REBLOCK_PREFIX.length));
 });
 
@@ -304,6 +223,9 @@ chrome.runtime.onInstalled.addListener(async details => {
   const state = await HB.get();
   if (details.reason === 'install' && !HB.isManaged(state)) {
     for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) await addBlock(d);
+    // First-run: open the welcome page so the user understands the Cooldown
+    // and can adjust the starter blocklist. Individual installs only.
+    try { chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') }); } catch (e) { /* no tabs access */ }
   }
   await ensureAlarms();
   if (HB.isManaged(state)) await syncManaged(); else await applyRules();
@@ -313,7 +235,6 @@ chrome.runtime.onStartup.addListener(async () => {
   await ensureAlarms();
   const state = await HB.get();
   if (HB.isManaged(state)) await syncManaged(); else await applyRules();
-  refreshEntitlement();
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -323,7 +244,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'getState': return sendResponse({ ok: true, state: await HB.get() });
         case 'addBlock': return sendResponse(await addBlock(msg.domain));
         case 'removeBlock': return sendResponse(await removeBlock(msg.domain));
-        case 'cancelRemoval': return sendResponse(await cancelRemoval(msg.domain));
         case 'startCooldown': return sendResponse(await startCooldown(msg.domain));
         case 'grantAllowance': return sendResponse(await grantAllowance(msg.domain, msg.reason));
         case 'enrollTeam': return sendResponse(await enrollTeam(msg.serverUrl, msg.code, msg.deviceName));
@@ -334,7 +254,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'selfGrantManaged': return sendResponse(await selfGrantManaged(msg.domain, msg.reason));
         case 'telemetry': await telemetry(msg.domain, msg.event); return sendResponse({ ok: true });
         case 'applyRules': await applyRules(); return sendResponse({ ok: true });
-        case 'refreshEntitlement': return sendResponse(await refreshEntitlement());
         default: return sendResponse({ ok: false, error: 'unknown' });
       }
     } catch (e) {

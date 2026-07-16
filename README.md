@@ -1,8 +1,10 @@
-# Deadbolt Blocker
+# Hardass Blocker
 
 **The blocker you can't talk your way out of.**
 
-Every website blocker fails at the same moment — the one-click "just disable it for a sec" when self-control is weakest. Deadbolt Blocker makes *unblocking* deliberately hard: a mandatory cooldown, a written reason, and a look at your own relapse history before you're let back in.
+> **Naming:** the individual product now ships on the Chrome Web Store as **Holdfast** (see `docs/`). This repo keeps "Hardass Blocker" as its working name; the SME/enterprise tier is **Deadbolt for Teams**. A full project rename to Holdfast is optional — tracked in `docs/LAUNCH-PROGRESS.md`.
+
+Every website blocker fails at the same moment — the one-click "just disable it for a sec" when self-control is weakest. Hardass Blocker makes *unblocking* deliberately hard: a mandatory cooldown, a written reason, and a look at your own relapse history before you're let back in.
 
 This repo contains the concept, the brand, and a working proof-of-concept.
 
@@ -16,17 +18,15 @@ This repo contains the concept, the brand, and a working proof-of-concept.
 | [`docs/BRAND.md`](docs/BRAND.md) | Brand guide — voice, two-mark logo system (Rocky + deadbolt), palette, granite texture |
 | [`docs/MOAT.md`](docs/MOAT.md) | Circumvention-resistance strategy — the layered defense and its honest limits |
 | [`enterprise-policy/`](enterprise-policy/) | Chrome/Edge force-install policy — makes the extension unremovable without MDM |
-| [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Deadbolt" product) |
+| [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Hardass" product) |
 | [`server/`](server/) | Enterprise POC backend — Node.js API (auth, policy sync, approvals, telemetry) |
-| [`console/`](console/) | Enterprise POC — the admin console (Deadbolt for Teams) with self-serve signup + billing |
+| [`console/`](console/) | Enterprise POC — the admin console (Deadbolt for Teams) |
 | [`device/`](device/) | Enterprise POC — a managed-device client that enrols and enforces policy |
-| [`account/`](account/) | Consumer web app — signup, pricing, Deadbolt Pro checkout + account |
-| [`server/billing.js`](server/billing.js) | Billing engine — plans, checkout, entitlements (simulated now, real Stripe when `STRIPE_SECRET_KEY` is set) |
 | [`tools/gen-icons.js`](tools/gen-icons.js) | Dependency-free PNG icon generator |
 
 There are two products here sharing one idea, matching the business plan's two phases:
 
-1. **Deadbolt Blocker** (`extension/`) — the individual product. Self-discipline via the Cooldown.
+1. **Hardass Blocker** (`extension/`) — the individual product. Self-discipline via the Cooldown.
 2. **Deadbolt for Teams** (`server/` + `console/` + `device/`) — the SME product. The *same enforcement idea*, but the admin holds the key. This is the part that has no equivalent on the market (Freedom has a team tier but refuses to enforce; MDM is overkill).
 
 ---
@@ -107,16 +107,6 @@ Now the extension:
 
 Leaving a team is blocked while the policy is `locked` — exactly the "can't talk your way out of it" promise, enforced by the org instead of a timer.
 
-### Signup & payments
-
-Both products share one billing backend. It runs in **simulated mode** out of the box (no account, no real charges) and switches to **real Stripe** the moment you set `STRIPE_SECRET_KEY` — the Stripe calls go through Stripe's REST API over `fetch`, so the server stays dependency-free.
-
-**Consumer (Deadbolt Pro):** open <http://localhost:8787/account/> → create an account → free tier blocks 5 sites; **Go Pro** ($4/mo) or **Lifetime** ($49) runs a checkout → entitlement flips to Pro. In the extension, **Settings › Account** signs in to the same backend; once Pro, the 5-site free limit is lifted.
-
-**SME (Deadbolt for Teams):** in the console, **Create organization** → the org starts *inactive* and **enrolment is blocked** → **Billing** → pick seats ($4/seat/mo, 3-seat min) → checkout → the subscription goes *active* and enrolment codes unlock. Cancelling re-locks enrolment. Payment ⇒ enforcement; no payment ⇒ no enforcement.
-
-**Go live with Stripe:** set `STRIPE_SECRET_KEY` (test key `sk_test_…` is fine) and, for signature-verified webhooks, `STRIPE_WEBHOOK_SECRET`, then point a Stripe webhook at `POST /api/stripe/webhook`. Checkout, subscriptions (with seat quantity), and entitlement updates all work through the same code paths as the simulator.
-
 ### Enterprise backend notes
 
 - Zero npm dependencies — plain Node `http`, `crypto` (scrypt password hashing), JSON-file store (`server/data.json`, gitignored, seeded on first run).
@@ -142,8 +132,7 @@ Both products share one billing backend. It runs in **simulated mode** out of th
 - [x] Circumvention-resistance layers 1–2: bypass-vector blocking (proxies/translate/cache/archive), self-healing watchdog, pinned extension ID, and Chrome/Edge **force-install** policy so the user can't disable/remove it or use incognito. See [`docs/MOAT.md`](docs/MOAT.md) + [`enterprise-policy/`](enterprise-policy/).
 - [ ] Circumvention-resistance layer 3: native OS agent (DNS/hosts/other-browser/uninstall resistance). *(needs: native builds, code-signing, admin testing)*
 - [ ] Cross-browser (Firefox) build target.
-- [x] Billing + signup: consumer accounts (free/Pro/lifetime) and SME self-serve org signup with per-seat subscriptions; checkout, entitlements, cancel, and paywall gating. Simulated now, real Stripe behind `STRIPE_SECRET_KEY`. See [`server/billing.js`](server/billing.js) + [`account/`](account/).
-- [ ] Production backend: real DB + **multi-tenancy** (single-org POC today), **SSO**, live Stripe keys, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
+- [ ] Production backend: real DB + multi-tenancy, SSO, Stripe billing, HTTPS. *(needs: hosting, a DB, Stripe + IdP accounts)*
 
 ---
 

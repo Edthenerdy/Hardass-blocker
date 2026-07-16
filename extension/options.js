@@ -26,6 +26,8 @@
     teamMsg: document.getElementById('teamMsg')
   };
 
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
   function fmtDate(ts) {
     const d = new Date(ts);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
@@ -41,10 +43,10 @@
       const p = state.policy || {};
       const locked = p.enforcement === 'locked';
       team.info.innerHTML =
-        '<div class="note" style="margin-bottom:10px">Managed by <strong style="color:var(--bone)">' + (p.org || '') + '</strong> · group <strong style="color:var(--bone)">' + (p.group || '') + '</strong></div>' +
+        '<div class="note" style="margin-bottom:10px">Managed by <strong style="color:var(--bone)">' + esc(p.org || '') + '</strong> · group <strong style="color:var(--bone)">' + esc(p.group || '') + '</strong></div>' +
         '<div class="log"><table class="log"><tbody>' +
-        '<tr><td>Enforcement</td><td>' + (p.enforcement || '') + '</td></tr>' +
-        '<tr><td>Unblock mode</td><td>' + (p.unblockMode || '') + '</td></tr>' +
+        '<tr><td>Enforcement</td><td>' + esc(p.enforcement || '') + '</td></tr>' +
+        '<tr><td>Unblock mode</td><td>' + esc(p.unblockMode || '') + '</td></tr>' +
         '<tr><td>Blocked sites</td><td>' + ((p.blocklist || []).length) + '</td></tr>' +
         '</tbody></table></div>';
       team.leaveBtn.disabled = locked;
@@ -132,79 +134,6 @@
     load();
   });
 
-  /* ---------- account (Deadbolt Pro) ---------- */
-  const acct = {
-    signedOut: document.getElementById('acctSignedOut'),
-    signedIn: document.getElementById('acctSignedIn'),
-    server: document.getElementById('acctServer'),
-    email: document.getElementById('acctEmail'),
-    pass: document.getElementById('acctPass'),
-    signup: document.getElementById('acctSignup'),
-    login: document.getElementById('acctLogin'),
-    msg: document.getElementById('acctMsg'),
-    info: document.getElementById('acctInfo'),
-    upgrade: document.getElementById('acctUpgrade'),
-    refresh: document.getElementById('acctRefresh'),
-    signout: document.getElementById('acctSignout'),
-    msg2: document.getElementById('acctMsg2')
-  };
-
-  async function acctApi(server, path, opts, tok) {
-    opts = opts || {};
-    opts.headers = Object.assign({ 'Content-Type': 'application/json' }, tok ? { 'Authorization': 'Bearer ' + tok } : {}, opts.headers || {});
-    const res = await fetch(server.replace(/\/+$/, '') + path, opts);
-    return res.json();
-  }
-
-  async function loadAccount() {
-    const state = await HB.get();
-    const a = state.account;
-    const signed = !!(a && a.userToken);
-    acct.signedOut.hidden = signed;
-    acct.signedIn.hidden = !signed;
-    if (signed) {
-      const pro = a.plan === 'pro';
-      acct.info.innerHTML = 'Signed in as <strong style="color:var(--bone)">' + a.email + '</strong><br>Plan: ' +
-        '<strong style="color:' + (pro ? 'var(--clear)' : 'var(--bone)') + '">' + (pro ? 'Pro — unlimited' : 'Free — 5-site limit') + '</strong>';
-      acct.upgrade.hidden = pro;
-    }
-  }
-
-  async function acctAuth(kind) {
-    acct.msg.textContent = 'Working…';
-    const server = acct.server.value.trim();
-    const res = await acctApi(server, '/api/auth/user/' + kind, { method: 'POST', body: JSON.stringify({ email: acct.email.value.trim(), password: acct.pass.value }) });
-    if (!res.ok) { acct.msg.textContent = res.error || 'Failed'; return; }
-    // Store account with plan unset; the background worker verifies the signed
-    // entitlement and sets the real plan (a flag here can't fake Pro).
-    await HB.set({ account: { serverUrl: server, userToken: res.token, email: acct.email.value.trim().toLowerCase(), plan: 'free', verifiedAt: null } });
-    acct.pass.value = ''; acct.msg.textContent = '';
-    await chrome.runtime.sendMessage({ type: 'refreshEntitlement' });
-    loadAccount();
-  }
-  acct.signup.addEventListener('click', () => acctAuth('signup'));
-  acct.login.addEventListener('click', () => acctAuth('login'));
-
-  acct.refresh.addEventListener('click', async () => {
-    acct.msg2.textContent = 'Checking…';
-    const res = await chrome.runtime.sendMessage({ type: 'refreshEntitlement' });
-    if (res && res.ok) {
-      acct.msg2.textContent = res.verified ? ('Plan: ' + res.plan + '.') : 'Could not verify — treated as free.';
-      setTimeout(() => { acct.msg2.textContent = ''; }, 2200);
-      loadAccount();
-    } else acct.msg2.textContent = 'Not signed in.';
-  });
-
-  acct.upgrade.addEventListener('click', async () => {
-    const state = await HB.get(); const a = state.account; if (!a) return;
-    const res = await acctApi(a.serverUrl, '/api/billing/checkout', { method: 'POST', body: JSON.stringify({ plan: 'pro_monthly' }) }, a.userToken);
-    if (res.ok && res.url) window.open(res.url, '_blank');
-    else acct.msg2.textContent = res.error || 'Checkout failed';
-  });
-
-  acct.signout.addEventListener('click', async () => { await HB.set({ account: null }); loadAccount(); });
-
   load();
   loadTeam();
-  loadAccount();
 })();

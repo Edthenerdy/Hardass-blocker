@@ -1,87 +1,89 @@
-# Chrome Web Store — Privacy & Permissions submission
+# Chrome Web Store — submission pack (Holdfast)
 
-Copy-paste fields for the Web Store dashboard's **Privacy** tab. Every justification is
-specific to what Deadbolt Blocker actually does — vague or over-broad wording is a top
-rejection reason, so keep these tight.
+Everything to paste into the Developer Dashboard. Copy each block verbatim; swap the two placeholders marked ⚠️.
 
 ---
 
-## Privacy policy URL
+## Listing basics
 
-> https://edthenerdy.github.io/Hardass-blocker/privacy-policy.html
+- **Name:** `Holdfast — Website Blocker`
+- **Category:** Productivity → *Workflow & Planning*
+- **Language:** English
+- **Short description (132-char limit, from manifest):**
+  `The blocker you can't talk your way out of. Unblocking means a cooldown, a written reason, and facing your own relapse history.`
 
-The policy lives at [`docs/privacy-policy.html`](privacy-policy.html). To publish it for
-free: repo **Settings → Pages → Source: Deploy from a branch → Branch: `main`, folder:
-`/docs` → Save**. Wait ~1 minute, then the URL above goes live — paste it into the CWS
-**Privacy policy** field. (Any publicly reachable HTTPS URL works — GitHub Pages is just
-the zero-cost option.)
+## Detailed description (paste into "Description")
 
----
+```
+Every website blocker fails at the same moment — the one-click "just disable it for a sec" when your self-control is weakest. Holdfast makes UNBLOCKING deliberately hard, so the block you set actually holds.
 
-## Single purpose (required field)
+When you try to open a site you've blocked, you don't get a nag you can dismiss. You get the Cooldown:
 
-> Deadbolt Blocker blocks a user-chosen list of websites and enforces a waiting period
-> before any block can be lifted, to help people stay off distracting sites.
+1. WAIT. A mandatory cooldown timer (you set the length — default 20 min). It keeps running even if you close the tab; reopening doesn't reset it.
+2. WRITE WHY. Type a real reason before you can unblock. Minimum length enforced. No blank, thoughtless unblocks.
+3. FACE YOUR HISTORY. See how many times you've caved this week, your average self-granted pass, and when you last gave in.
 
----
+Only then does the unblock button work — and it grants a time-boxed pass that re-blocks the site automatically when it runs out.
 
-## Permission justifications
+WHY IT WORKS
+- The wait kills the impulse.
+- The written reason kills the self-deception.
+- The history is the mirror.
 
-Paste each into the matching box under **Privacy → Permission justification**.
+FEATURES
+- Block any site in two clicks from the toolbar.
+- Set your own cooldown length, pass length, and minimum reason length.
+- Bypass-vector blocking: translation proxies, cached copies, and archive mirrors of blocked sites are blocked too.
+- Your relapse log, kept honest and kept private.
+- Per-device: your blocklist and history live on this device and nothing syncs anywhere.
 
-### `declarativeNetRequest`
-> Used to block navigation to the sites on the user's blocklist by redirecting them to the
-> extension's own "blocked" page. The extension defines redirect rules for the domains the
-> user chose to block; it does not observe or report the user's browsing.
+PRIVACY
+Holdfast stores everything locally on your device. It collects no personal data, sends nothing to us, and has no ads, analytics, or trackers. See the privacy policy linked below.
 
-### `storage`
-> Used to save the user's blocklist, settings, cooldown/allowance timers, and their personal
-> relapse history locally on the device via `chrome.storage.local`. In personal use this data
-> never leaves the device.
+Holdfast won't argue with you. Past-you set the rule. Holdfast holds the line.
+```
 
-### `alarms`
-> Used to run time-based enforcement: expiring a temporary "allowance" and re-blocking a site
-> when its cooldown ends, and a periodic watchdog that re-asserts the blocking rules if they
-> are cleared or tampered with. Also drives the periodic policy sync when the extension is
-> enrolled in managed mode.
+## Single purpose (paste into "Single purpose")
 
-### Host permission `<all_urls>`
-> Required so the blocking rules can apply to any domain the user chooses to add to their
-> blocklist — the extension cannot know in advance which sites a given user will block, so it
-> needs the ability to match any URL at the main-frame navigation level. The extension only
-> checks whether the destination URL is on the user's blocklist in order to redirect it. It
-> does not read, inject into, collect, or transmit the content of any page.
+```
+Holdfast blocks websites the user chooses and enforces a deliberate cooldown — a timed wait, a written reason, and a review of the user's own unblocking history — before a blocked site can be reopened.
+```
 
----
+## Permission justifications (paste one per field)
 
-## Data usage disclosures (checkboxes + certification)
+- **`declarativeNetRequest`**
+  `Used to redirect a site the user has blocked to the extension's cooldown page. The extension defines block rules; the browser enforces them. It does not read or intercept the content of pages.`
 
-Answer the "What user data do you collect?" section as follows.
+- **`storage`**
+  `Stores the user's blocklist, settings, active cooldowns, and relapse history locally on the device (chrome.storage.local). Nothing is transmitted off the device.`
 
-**Personal (unmanaged) mode — the default:** the extension collects **no** data that is
-transmitted off the device. All storage is local. On the data-collection checklist, do **not**
-tick any category as collected/transmitted, because in personal mode nothing is sent anywhere.
+- **`alarms`**
+  `Re-blocks a site automatically when its time-boxed pass expires, and periodically re-asserts the user's block rules if they are cleared.`
 
-**If you also ship managed/enterprise mode in the same published build,** disclose that when a
-user is enrolled by an organisation, the extension transmits to that organisation's own server:
-the domain and reason text for an access request, and blocked/allowed enforcement events. This
-maps to the CWS category **"Website content" → no**, **"User activity"** (limited to the
-blocked-domain events) and **"Personal communications" → no**. Certify:
+- **`activeTab`**
+  `Lets the user block the site in the current tab with one click from the toolbar popup.`
 
-- ☑ I do not sell or transfer user data to third parties, outside of the approved use cases.
-- ☑ I do not use or transfer user data for purposes unrelated to my item's single purpose.
-- ☑ I do not use or transfer user data to determine creditworthiness or for lending purposes.
+- **Host permissions (`<all_urls>`)**
+  `Required so the user can block any website they choose — the block rule must be able to apply to any host. The extension does not read, collect, log, or transmit the user's browsing; host access is used only to redirect user-blocked sites to the cooldown page.`
 
-> **Recommendation:** if the first public listing is the consumer product, publish the
-> extension *without* the managed-mode code paths active by default (they only activate on
-> explicit enrolment). That keeps the data disclosure to the simplest, cleanest answer —
-> "all data stays on device" — which is the fastest path through review.
+- **Are you using remote code?** → **No.** All code is bundled in the package; nothing is fetched and executed at runtime.
 
----
+## Privacy practices tab (what to declare)
 
-## Notes for reviewer (optional "notes" field)
+- **Single purpose** — as above.
+- **Data collected:** select **none**. Holdfast does not collect or transmit user data in individual use.
+- **Data usage certifications** — tick all three:
+  - I do not sell or transfer user data to third parties (outside approved use cases).
+  - I do not use or transfer user data for purposes unrelated to the item's single purpose.
+  - I do not use or transfer user data to determine creditworthiness or for lending.
+- **Privacy policy URL:** ⚠️ `https://<your-username>.github.io/<repo>/privacy.html` (from GitHub Pages — see below)
 
-> This is a website blocker. It stores the user's blocklist and settings locally. It requests
-> broad host access only because blocking rules must be able to match whichever domains the
-> individual user chooses to block; it does not read or transmit page content. An optional
-> enterprise mode communicates only with a server address the enrolling organisation controls.
+## Graphics to upload
+- **Store icon:** 128×128 (in `extension/icons/icon128.png`).
+- **Screenshots:** at least 1, ideally 3–5, at **1280×800** (or 640×400). I'll generate these — the cooldown page, the popup, and the settings/history view.
+- **Small promo tile (optional but recommended):** 440×280.
+
+## Notes
+- ⚠️ **Contact email in the privacy policy** is currently `support@holdfast.app`. Either grab `holdfast.app` and set up forwarding, or change it in `docs/privacy.html` to an address you own before publishing.
+- The `<all_urls>` + `declarativeNetRequest` combo can trigger a manual review question. The justification above is written to answer it head-on; if Google asks, reply fast quoting it.
+- Do **not** claim "unbypassable" anywhere in the listing — the individual extension can be disabled by a determined user. Sell the Cooldown, not enforcement.

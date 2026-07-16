@@ -35,6 +35,7 @@
     return hrs < 24 ? hrs + 'h ago' : Math.round(hrs / 24) + 'd ago';
   }
   function msg(type, extra) { return chrome.runtime.sendMessage(Object.assign({ type }, extra || {})); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
   el.backBtn.addEventListener('click', () => {
     if (poll) clearInterval(poll);
@@ -48,7 +49,7 @@
     msg('telemetry', { domain, event: 'blocked' });
 
     el.stats.hidden = true;
-    el.sub.innerHTML = domain + ' — blocked by <strong>' + (policy.org || 'your organization') + '</strong> · ' + (policy.group || '');
+    el.sub.innerHTML = esc(domain) + ' — blocked by <strong>' + esc(policy.org || 'your organization') + '</strong> · ' + esc(policy.group || '');
 
     if (policy.unblockMode === 'none') {
       el.headline.textContent = 'Blocked.';
@@ -239,6 +240,9 @@
     el.timer.style.display = 'none';
     el.timerCap.textContent = 'This is how you keep a block a block.';
     el.stats.hidden = true;
+    // There's nothing to start here — a bypass hit isn't a blocked-site cooldown.
+    // The only sensible action is to go back.
+    el.startBtn.hidden = true;
   }
 
   /* ================= boot ================= */

@@ -10,20 +10,12 @@ const HB = {
     allowances: {},
     cooldowns: {},
     relapseLog: [],
-    pendingRemovals: {},
     team: null,
-    policy: null,
-    account: null
+    policy: null
   },
-
-  FREE_LIMIT: 5,
 
   isManaged(state) {
     return !!(state && state.team && state.team.deviceToken);
-  },
-
-  isPro(state) {
-    return !!(state && state.account && state.account.plan === 'pro');
   },
 
   // Common ways people reach a blocked site without visiting it directly:

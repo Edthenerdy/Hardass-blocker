@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Holdfast — the blocker you can't talk your way out of</title>
+  <meta name="description" content="Holdfast blocks distracting sites and makes unblocking deliberately hard: a cooldown, a written reason, and a look at your own relapse history. A Chrome & Edge extension." />
+  <style>
+    :root{--ink:#0E0E10;--slate:#1B1C20;--slate2:#232529;--steel:#33353B;--bone:#F4F1EC;--ash:#9A9CA3;--red:#FF3B30;--redbg:#3A1510;color-scheme:dark;}
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--ink);color:var(--bone);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+    a{color:var(--red);text-decoration:none;}
+    .wrap{max-width:1040px;margin:0 auto;padding:0 24px;}
+    .nav{display:flex;align-items:center;gap:12px;padding:22px 0;}
+    .mark{width:38px;height:38px;flex:0 0 auto;}
+    .brand{font-weight:800;font-size:20px;letter-spacing:.2px;}
+    .btn{display:inline-block;background:var(--red);color:#fff;font-weight:800;padding:14px 26px;border-radius:40px;font-size:16px;border:0;cursor:pointer;}
+    .btn.ghost{background:var(--redbg);color:var(--red);border:1px solid var(--red);}
+    .hero{padding:60px 0 40px;}
+    .kicker{color:var(--red);font-weight:800;letter-spacing:3px;font-size:12px;text-transform:uppercase;}
+    h1{font-size:clamp(38px,6vw,68px);line-height:1.02;margin:14px 0 18px;font-weight:800;}
+    .lead{font-size:19px;color:var(--ash);max-width:620px;}
+    .cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:30px;}
+    .chip{display:inline-block;background:var(--redbg);color:var(--red);border:1px solid var(--red);border-radius:30px;padding:9px 18px;font-weight:800;font-size:14px;}
+    section{padding:46px 0;border-top:1px solid var(--steel);}
+    h2{font-size:clamp(26px,4vw,36px);margin:0 0 8px;font-weight:800;}
+    .sub{color:var(--ash);max-width:640px;margin-bottom:28px;}
+    .grid{display:grid;gap:18px;}
+    .g3{grid-template-columns:repeat(3,1fr);}
+    .g2{grid-template-columns:repeat(2,1fr);}
+    @media(max-width:760px){.g3,.g2{grid-template-columns:1fr;}}
+    .card{background:var(--slate);border:1px solid var(--steel);border-radius:16px;padding:24px;}
+    .num{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--redbg);border:1px solid var(--red);color:var(--red);font-weight:800;margin-bottom:12px;}
+    .card h3{margin:0 0 6px;font-size:19px;}
+    .card p{margin:0;color:var(--ash);font-size:15px;}
+    .honest{background:var(--slate2);border-radius:16px;padding:24px 28px;color:var(--ash);}
+    .honest strong{color:var(--bone);}
+    footer{padding:40px 0 70px;color:var(--ash);font-size:14px;border-top:1px solid var(--steel);}
+    footer a{color:var(--ash);}
+    .foot-links{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <nav class="nav">
+      <svg class="mark" viewBox="0 0 120 120" aria-hidden="true"><rect x="20" y="20" width="80" height="80" rx="20" fill="#FF3B30"/><rect x="26" y="46" width="68" height="48" rx="24" fill="#A7ABB2"/><circle cx="38" cy="58" r="3" fill="#7C8188"/><circle cx="82" cy="60" r="2.5" fill="#7C8188"/><circle cx="40" cy="86" r="2.5" fill="#7C8188"/><circle cx="82" cy="84" r="3" fill="#7C8188"/><path d="M43 57 L55 61" stroke="#0E0E10" stroke-width="4.4" stroke-linecap="round"/><path d="M77 57 L65 61" stroke="#0E0E10" stroke-width="4.4" stroke-linecap="round"/><circle cx="50" cy="70" r="5.5" fill="#0E0E10"/><circle cx="70" cy="70" r="5.5" fill="#0E0E10"/><circle cx="48" cy="68" r="1.8" fill="#F4F1EC"/><circle cx="68" cy="68" r="1.8" fill="#F4F1EC"/><path d="M54 84 L66 84" stroke="#0E0E10" stroke-width="3.8" stroke-linecap="round"/></svg>
+      <span class="brand">Holdfast</span>
+    </nav>
+
+    <header class="hero">
+      <div class="kicker">Focus &amp; website blocker</div>
+      <h1>The blocker you can't<br>talk your way out of.</h1>
+      <p class="lead">Every blocker fails at the same moment — the one-click "just disable it for a sec" when your self-control is weakest. Holdfast makes <em>unblocking</em> deliberately hard, so the block you set actually holds.</p>
+      <div class="cta">
+        <!-- TODO: replace # with the Chrome Web Store listing URL once live -->
+        <a class="btn" href="#">Add to Chrome — free</a>
+        <span class="chip">Blocked. On purpose.</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>The Cooldown</h2>
+      <p class="sub">To lift any block, you do all three. The wait kills the impulse; the reason kills the self-deception; the history is the mirror.</p>
+      <div class="grid g3">
+        <div class="card"><div class="num">1</div><h3>Wait</h3><p>A mandatory cooldown (you set the length — default 20 min). It keeps running even if you close the tab. Reopening doesn't reset it.</p></div>
+        <div class="card"><div class="num">2</div><h3>Write why</h3><p>Type a real reason before you can unblock. Minimum length enforced. No blank, thoughtless unblocks.</p></div>
+        <div class="card"><div class="num">3</div><h3>Face your history</h3><p>See how many times you've caved this week, your average self-granted pass, and when you last gave in.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>What you get</h2>
+      <div class="grid g2">
+        <div class="card"><h3>Real blocking</h3><p>Blocked sites redirect to the Cooldown — subdomains and http/https covered.</p></div>
+        <div class="card"><h3>Time-boxed passes</h3><p>Unblock grants a few minutes, then the site re-blocks itself automatically.</p></div>
+        <div class="card"><h3>No side doors</h3><p>Translation proxies, cached copies, and archive mirrors of blocked sites are blocked too. "Nice try."</p></div>
+        <div class="card"><h3>Your history, kept honest</h3><p>Every unblock is logged with the reason you typed — and shown back to you.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Straight about what it is</h2>
+      <div class="honest">
+        <p>Holdfast is built for <strong>self-discipline, not surveillance.</strong> Everything stays on your device — your blocklist, your settings, your history. It collects <strong>no</strong> data, sends nothing to us, and has no ads or trackers.</p>
+        <p style="margin-bottom:0">And we won't oversell it: on your own machine, a determined person can still turn an extension off. Holdfast raises the cost of caving with the Cooldown — the friction that changes behaviour. <em>Past-you set the rule. Holdfast holds the line.</em></p>
+      </div>
+      <div class="cta">
+        <a class="btn" href="#">Add to Chrome — free</a>
+        <a class="btn ghost" href="https://github.com/Edthenerdy/Hardass-blocker">View on GitHub</a>
+      </div>
+    </section>
+
+    <footer>
+      <div><strong style="color:var(--bone)">Holdfast</strong> — the blocker you can't talk your way out of.</div>
+      <div class="foot-links">
+        <a href="privacy.html">Privacy</a>
+        <a href="https://github.com/Edthenerdy/Hardass-blocker">GitHub</a>
+        <a href="mailto:support@holdfast.app">Contact</a>
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>
