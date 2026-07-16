@@ -169,3 +169,13 @@ button:active { transform: scale(0.99); }
 }
 
 .ghost:hover { color: var(--bone); }
+
+.sidekick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 26px;
+  color: var(--ash);
+  font-size: 12px;
+}

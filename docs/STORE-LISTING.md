@@ -1,7 +1,7 @@
 # Chrome Web Store — Privacy & Permissions submission
 
 Copy-paste fields for the Web Store dashboard's **Privacy** tab. Every justification is
-specific to what Hardass Blocker actually does — vague or over-broad wording is a top
+specific to what Deadbolt Blocker actually does — vague or over-broad wording is a top
 rejection reason, so keep these tight.
 
 ---
@@ -20,7 +20,7 @@ the zero-cost option.)
 
 ## Single purpose (required field)
 
-> Hardass Blocker blocks a user-chosen list of websites and enforces a waiting period
+> Deadbolt Blocker blocks a user-chosen list of websites and enforces a waiting period
 > before any block can be lifted, to help people stay off distracting sites.
 
 ---

@@ -1,4 +1,4 @@
-# Hardass Blocker — Business Plan
+# Deadbolt Blocker — Business Plan
 
 *Working draft v0.1 · July 2026*
 
@@ -8,7 +8,7 @@
 
 ## 1. The thesis in a paragraph
 
-Every website/app blocker on the market fails at the same two moments. For individuals, it fails at the instant of temptation — the one-click "just disable it for a sec" that every incumbent allows because, as a consumer product, a truly unbeatable block creates angry customers and chargebacks. For small businesses, it fails at deployment — there is no product that lets a manager *enforce* a blocking policy across a handful of work machines without buying heavyweight enterprise device-management software built for 500-seat corporates. Hardass Blocker attacks both gaps with one engine: **genuinely hard-to-bypass blocking** (the "hardass" promise) delivered to individuals as self-discipline and to small teams as **admin-enforced policy** — the thing every incumbent structurally refuses to build.
+Every website/app blocker on the market fails at the same two moments. For individuals, it fails at the instant of temptation — the one-click "just disable it for a sec" that every incumbent allows because, as a consumer product, a truly unbeatable block creates angry customers and chargebacks. For small businesses, it fails at deployment — there is no product that lets a manager *enforce* a blocking policy across a handful of work machines without buying heavyweight enterprise device-management software built for 500-seat corporates. Deadbolt Blocker attacks both gaps with one engine: **genuinely hard-to-bypass blocking** (the "can't talk your way out of it" promise) delivered to individuals as self-discipline and to small teams as **admin-enforced policy** — the thing every incumbent structurally refuses to build.
 
 ---
 
@@ -56,14 +56,14 @@ We ran a multi-source, adversarially fact-checked scan. What survived verificati
 | **Cold Turkey** | Strongest locking ("own forever") | None (personal-use license only) | Self only | One-time $39 / $49 |
 | **Freedom** | Soft | **Team tier exists** | **Refuses to enforce** | Flat $99 / $299 / $999 mo, 11+ seat min |
 | **Enterprise MDM** | Strong | Yes | Yes | Overkill: agents, IT, contracts |
-| **→ Hardass Blocker** | **Genuinely hard** | **Yes, SME-friendly** | **Admin-enforced** | *TBD — see §6* |
+| **→ Deadbolt Blocker** | **Genuinely hard** | **Yes, SME-friendly** | **Admin-enforced** | *TBD — see §6* |
 
 The decisive finding is the **Freedom row**. Freedom is the *only* incumbent with a real team product, and they built it toothless *on purpose*. Their own docs:
 
 > *"Freedom is self-managed by each account holder... no mandates, no forced sessions, no shackles."*
 > *"No one other than you can see what you choose to block or when — not even your Team Administrator."*
 
-That is a deliberate philosophical stance, and it **leaves the entire "the admin actually enforces it" market wide open.** No reviewed product combines (i) admin-pushed/enforced blocklists with (ii) SME-friendly, non-MDM deployment. That is the position Hardass Blocker takes.
+That is a deliberate philosophical stance, and it **leaves the entire "the admin actually enforces it" market wide open.** No reviewed product combines (i) admin-pushed/enforced blocklists with (ii) SME-friendly, non-MDM deployment. That is the position Deadbolt Blocker takes.
 
 ---
 
@@ -75,7 +75,7 @@ Same engine, two chassis. The hard engineering problem — a block that genuinel
 
 **Phase 0 — POC (now).** Chrome MV3 extension proving the Cooldown on the surface BlockSite competes on. Self-contained, demoable, stress-tests the core mechanic. *(This repo.)*
 
-**Phase 1 — Individual product.** Polished cross-browser + desktop app. Individual "hardass" mode. This is R&D and proof: thousands of users stress-test "can't be removed" for free, and tell us within days whether the friction is too soft or too hard.
+**Phase 1 — Individual product.** Polished cross-browser + desktop app. Individual strict mode. This is R&D and proof: thousands of users stress-test "can't be removed" for free, and tell us within days whether the friction is too soft or too hard.
 
 **Phase 2 — SME enforcement (the business).** Same engine + a central admin console: admin defines the blocklist and Cooldown policy, pushes it to team devices, and members *can't* unilaterally disable it. No MDM, no IT department, deploy in an afternoon. This is where the money is.
 

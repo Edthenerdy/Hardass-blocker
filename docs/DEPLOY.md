@@ -56,7 +56,7 @@ Not needed for a pilot. When you need multiple instances or heavy write volume, 
 ## 5. Publish the extension (needed for force-install) **[you]**
 
 1. Register a Chrome Web Store developer account (one-time **$5**).
-2. Build the upload zip: `node tools/gen-icons.js` (icons) then zip the `extension/` folder contents (or use the pre-built `dist/hardass-blocker-*.zip`).
+2. Build the upload zip: `node tools/gen-icons.js` (icons) then zip the `extension/` folder contents (or use the pre-built `dist/deadbolt-blocker-*.zip`).
 3. Create a listing — copy is in [`STORE-LISTING.md`](STORE-LISTING.md); assets in [`../store-assets/`](../store-assets/); privacy policy at [`privacy-policy.html`](privacy-policy.html) (host it or paste the URL).
 4. Upload, submit for review (~1–3 days).
 5. **Send me the assigned extension ID** — I confirm it matches the pinned key in the manifest, or update the force-install policy files in [`enterprise-policy/`](../enterprise-policy/).

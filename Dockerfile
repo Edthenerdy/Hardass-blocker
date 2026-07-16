@@ -1,4 +1,4 @@
-# Deadbolt / Hardass Blocker server — zero-dependency Node app.
+# Deadbolt / Deadbolt Blocker server — zero-dependency Node app.
 FROM node:20-alpine
 WORKDIR /app
 COPY . .

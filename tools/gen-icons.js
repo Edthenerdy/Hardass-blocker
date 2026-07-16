@@ -1,5 +1,5 @@
 'use strict';
-// Renders the Hardass Blocker mascot (a cute-but-tough granite rock) to PNG
+// Renders the Deadbolt glyph (red housing + thrown bolt) to PNG
 // icons, dependency-free. Run: node tools/gen-icons.js
 const fs = require('node:fs');
 const zlib = require('node:zlib');
@@ -56,23 +56,15 @@ function capsule(ax, ay, bx, by, r) {
 function draw(size) {
   const buf = Buffer.alloc(size * size * 4, 0);
   const s = size / 120;
-  const RED = hex('#FF3B30'), GRAN = hex('#A7ABB2'), SPK = hex('#7C8188'), INK = hex('#0E0E10'), BONE = hex('#F4F1EC');
+  const RED = hex('#FF3B30'), INK = hex('#0E0E10');
 
+  // Deadbolt glyph: red rounded housing, a thrown bolt bar + thumbturn in ink.
   const housing = roundRect(20 * s, 20 * s, 100 * s, 100 * s, 20 * s);
-  const pebble = roundRect(26 * s, 46 * s, 94 * s, 94 * s, 24 * s);
-  const speckles = [[38, 58, 3], [82, 60, 2.5], [40, 86, 2.5], [82, 84, 3]].map(([x, y, r]) => circle(x * s, y * s, r * s));
-  const browL = capsule(43 * s, 57 * s, 55 * s, 61 * s, 2.2 * s);
-  const browR = capsule(77 * s, 57 * s, 65 * s, 61 * s, 2.2 * s);
-  const eyeL = circle(50 * s, 70 * s, 5.5 * s), eyeR = circle(70 * s, 70 * s, 5.5 * s);
-  const hlL = circle(48 * s, 68 * s, 1.8 * s), hlR = circle(68 * s, 68 * s, 1.8 * s);
-  const mouth = capsule(54 * s, 84 * s, 66 * s, 84 * s, 1.9 * s);
+  const bar = roundRect(34 * s, 54 * s, 88 * s, 66 * s, 6 * s);
+  const turn = circle(44 * s, 60 * s, 12 * s);
 
   function colorAt(px, py) {
-    if (hlL(px, py) || hlR(px, py)) return BONE;
-    if (eyeL(px, py) || eyeR(px, py)) return INK;
-    if (browL(px, py) || browR(px, py)) return INK;
-    if (mouth(px, py)) return INK;
-    if (pebble(px, py)) { for (const sp of speckles) if (sp(px, py)) return SPK; return GRAN; }
+    if (bar(px, py) || turn(px, py)) return INK;
     if (housing(px, py)) return RED;
     return null;
   }

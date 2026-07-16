@@ -6,12 +6,12 @@ Extension ID (pinned via the `key` in [`../extension/manifest.json`](../extensio
 
 ## Windows (Chrome or Edge)
 
-- **Quick:** right-click [`windows/hardass-force-install.reg`](windows/hardass-force-install.reg) → **Merge** (as admin). Restart Chrome.
+- **Quick:** right-click [`windows/deadbolt-force-install.reg`](windows/deadbolt-force-install.reg) → **Merge** (as admin). Restart Chrome.
 - **At scale:** push the same keys via Group Policy (`Computer Configuration → Administrative Templates → Google → Google Chrome → Extensions → Configure the list of force-installed apps and extensions`) or Intune.
 
 ## macOS / Linux (Chrome)
 
-- **Linux:** copy [`chrome-managed-policy.json`](chrome-managed-policy.json) to `/etc/opt/chrome/policies/managed/hardass.json`.
+- **Linux:** copy [`chrome-managed-policy.json`](chrome-managed-policy.json) to `/etc/opt/chrome/policies/managed/deadbolt.json`.
 - **macOS:** deliver the same keys as a configuration profile for `com.google.Chrome` (MDM or `profiles` command).
 
 ## Verify it worked

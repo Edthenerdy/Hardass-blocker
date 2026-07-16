@@ -132,7 +132,7 @@
     load();
   });
 
-  /* ---------- account (Hardass Pro) ---------- */
+  /* ---------- account (Deadbolt Pro) ---------- */
   const acct = {
     signedOut: document.getElementById('acctSignedOut'),
     signedIn: document.getElementById('acctSignedIn'),

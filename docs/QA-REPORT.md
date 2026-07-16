@@ -14,7 +14,7 @@
 
 ---
 
-## Individual user (Hardass Blocker) — scorecard
+## Individual user (Deadbolt Blocker) — scorecard
 
 | Criterion | Result |
 |---|---|

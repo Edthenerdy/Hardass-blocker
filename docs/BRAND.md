@@ -1,4 +1,4 @@
-# Hardass Blocker — Brand Guide
+# Deadbolt Blocker — Brand Guide
 
 *v0.1 · July 2026*
 
@@ -6,19 +6,18 @@
 
 ## 1. The idea
 
-Every other blocker is polite. It asks nicely, then folds the moment you push back. Hardass Blocker doesn't. The brand is **tough love, made honest**: it's on your side, but it will not be talked out of it. Blunt, dry, a little funny, never cruel. The kind of friend who says "no" and means it — and you thank them later.
+Every other blocker is polite. It asks nicely, then folds the moment you push back. Deadbolt Blocker doesn't. The brand is **tough love, made honest**: it's on your side, but it will not be talked out of it. Blunt, dry, a little funny, never cruel. The kind of friend who says "no" and means it — and you thank them later.
 
 **Brand promise:** *The blocker you can't talk your way out of.*
 
 ---
 
-## 2. Name
+## 2. Name — one brand across both
 
-**Hardass Blocker.** Committed (it's the product and the repo).
+**Deadbolt.** Consumer product = **Deadbolt Blocker**; business product = **Deadbolt for Teams**. One name, one identity, top to bottom.
 
-- **Strength:** memorable, on-brand, and it stands out in an app store full of earnest "Focus / Freedom / Flow" names. It *tells you what it does to you.*
-- **Known constraint:** the word "hardass" is a hurdle for the SME/enterprise phase — an office manager won't expense "Hardass Blocker," and app stores / procurement get twitchy about mild profanity.
-- **Resolution (recommended):** keep **Hardass Blocker** as the consumer-facing brand, and reserve a clean B2B brand for the SME tier running the *same engine* (candidates: **Deadbolt**, **Hardline**, **Ironclad**). Decide before the SME launch, not now. For the POC and individual product, Hardass is exactly right.
+- **Why:** a deadbolt is the perfect metaphor — a lock you throw deliberately and can't casually open. It's memorable, it says what the product *does*, and (unlike the earlier "Hardass" working name) it's clean enough for app-store review and for an office manager to expense. No consumer/B2B naming split to manage.
+- **Structure:** "Deadbolt Blocker" for individuals (the extension), "Deadbolt for Teams" for the SME/enterprise tier — same engine, same mark, differentiated only by the "for Teams" suffix.
 
 ---
 
@@ -43,18 +42,16 @@ Every other blocker is polite. It asks nicely, then folds the moment you push ba
 
 ---
 
-## 4. Logo — a two-mark system
+## 4. Logo — deadbolt glyph, with Rocky as sidekick
 
-The name is literally *hard as a rock*, so the consumer brand gets a mascot; the B2B brand keeps the serious glyph. Two marks, one family, same Redline tile.
+**Primary mark — the deadbolt.** A bold geometric glyph: a rounded red housing with a bolt bar thrown across it and a thumbturn. It reads as "locked, deliberately," works at favicon size, and is the app icon + header logo across **both** products (consumer and B2B). Serious, procurement-friendly, unmistakable.
 
-**Consumer — "Rocky", the hardass rock.** A cute-but-tough granite pebble with a stern brow and a flat, determined mouth, sitting on the Redline tile. Grumpy, not angry; on your side, but immovable. This is the face of **Hardass Blocker** — memorable, sticker-able, and it makes "the block that won't budge" adorable instead of hostile. Speckle texture on the stone ties to the granite texture (§7a).
+**Sidekick — "Rocky", the rock.** The cute granite pebble (stern brow, flat determined mouth) is kept as a **secondary character**, not the logo — a small mascot that shows up in-app to add warmth (e.g., on the blocked page: *"Rocky's not moving."*). He's the personality; the deadbolt is the brand.
 
-**B2B — the deadbolt.** The original geometric glyph — a rounded housing with a bar thrown across it — stays as the mark for **Deadbolt for Teams**. Serious, procurement-friendly, "locked, deliberately."
+**Wordmark:** `DEADBOLT` in a heavy grotesque, tight tracking, all caps; `BLOCKER` (or `FOR TEAMS`) lighter/smaller trailing. The weight contrast *is* the attitude.
 
-**Wordmark:** `HARDASS` in a heavy grotesque, tight tracking, all caps; `BLOCKER` lighter/smaller beneath or trailing. The weight contrast *is* the attitude.
-
-**Do:** keep the mascot on the Redline tile; keep the face simple enough to read at 16px. Use the deadbolt for anything B2B.
-**Don't:** make Rocky *smile* (he's stoic, not cheerful), add gradients, or outline the wordmark.
+**Do:** lead with the deadbolt glyph everywhere; use Rocky sparingly as an accent; keep both readable at 16px.
+**Don't:** make Rocky the primary logo, make him *smile* (he's stoic), add gradients, or outline the wordmark.
 
 *(See the rendered brand board for both marks.)*
 

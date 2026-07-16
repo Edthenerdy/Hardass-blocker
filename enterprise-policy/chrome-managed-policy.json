@@ -1,5 +1,5 @@
 {
-  "_comment": "macOS/Linux managed policy for Google Chrome. Linux: place at /etc/opt/chrome/policies/managed/hardass.json. macOS: convert to a configuration profile / plist for com.google.Chrome. Extension ID: mdfcmhkfkelkdhjbjddmkmjkmobijbgc",
+  "_comment": "macOS/Linux managed policy for Google Chrome. Linux: place at /etc/opt/chrome/policies/managed/deadbolt.json. macOS: convert to a configuration profile / plist for com.google.Chrome. Extension ID: mdfcmhkfkelkdhjbjddmkmjkmobijbgc",
   "ExtensionInstallForcelist": [
     "mdfcmhkfkelkdhjbjddmkmjkmobijbgc;https://clients2.google.com/service/update2/crx"
   ],
