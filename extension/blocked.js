@@ -149,17 +149,29 @@
 
   /* ================= individual (unmanaged) mode ================= */
 
-  function renderStats(stats) {
+  function fmtMinutes(min) {
+    min = Math.max(0, Math.round(min));
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? (m ? h + 'h ' + m + 'm' : h + 'h') : m + 'm';
+  }
+
+  function renderStats(stats, saved) {
     const rows = [];
+    // Lead with the encouraging metric so a disciplined user sees a win, not just zeros.
+    if (saved) {
+      rows.push(['Time saved this week', fmtMinutes(saved.weekMin), 'good']);
+      rows.push(['Time saved, all time', fmtMinutes(saved.allMin), 'good']);
+    }
     rows.push(['Times unblocked this week', String(stats.thisWeek)]);
     rows.push(['Times unblocked, all time', String(stats.allTime)]);
     if (stats.avgGranted) rows.push(['Average pass you grant yourself', stats.avgGranted + ' min']);
     if (stats.lastTs) rows.push(['Last time you caved', whenText(stats.lastTs)]);
     el.stats.innerHTML = '';
-    for (const [k, v] of rows) {
+    for (const [k, v, cls] of rows) {
       const row = document.createElement('div'); row.className = 'row';
       const a = document.createElement('span'); a.textContent = k;
       const b = document.createElement('span'); b.textContent = v;
+      if (cls === 'good') b.classList.add('good');
       if (k.startsWith('Times unblocked this week') && stats.thisWeek >= 3) b.classList.add('flag');
       row.append(a, b); el.stats.appendChild(row);
     }
@@ -205,7 +217,11 @@
   async function initIndividual(state) {
     settings = state.settings;
     el.sub.textContent = domain ? domain + ' — on your blocklist since you set it up sober.' : 'This site is on your blocklist.';
-    renderStats(HB.relapseStats(state.relapseLog, domain, Date.now()));
+    // Record this blocked visit (deduped in the background), then read fresh so the
+    // time-saved counter reflects it.
+    if (domain) await msg('logBlock', { domain });
+    const fresh = await HB.get();
+    renderStats(HB.relapseStats(fresh.relapseLog, domain, Date.now()), HB.timeSavedStats(fresh.blockLog, Date.now()));
 
     const cd = state.cooldowns[domain];
     if (cd) { endsAt = cd.endsAt; showCooldownRunning(); }

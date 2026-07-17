@@ -90,6 +90,7 @@ h1 {
 .stats .row span:first-child { color: var(--ash); }
 .stats .row span:last-child { color: var(--bone); font-weight: 500; }
 .stats .flag { color: var(--redline) !important; }
+.stats .good { color: #37D67A !important; }
 
 .reasonLabel {
   align-self: flex-start;

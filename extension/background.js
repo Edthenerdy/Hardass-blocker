@@ -136,6 +136,25 @@ async function reblock(domain) {
   await applyRules();
 }
 
+// Record a blocked visit (powers the time-saved stat). De-duped per domain within
+// 10 minutes so refreshing the block page doesn't inflate the count.
+async function logBlock(rawDomain) {
+  const domain = HB.normalizeDomain(rawDomain);
+  if (!domain) return { ok: false };
+  const state = await HB.get();
+  const log = state.blockLog || [];
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].domain === domain) {
+      if (Date.now() - log[i].ts < 10 * 60000) return { ok: true, deduped: true };
+      break;
+    }
+  }
+  log.push({ domain, ts: Date.now() });
+  if (log.length > 1000) log.splice(0, log.length - 1000); // bound local storage
+  await HB.set({ blockLog: log });
+  return { ok: true };
+}
+
 /* ---------------- managed (team) mode ---------------- */
 
 function baseUrl(team) { return String(team.serverUrl || '').replace(/\/+$/, ''); }
@@ -245,6 +264,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'addBlock': return sendResponse(await addBlock(msg.domain));
         case 'removeBlock': return sendResponse(await removeBlock(msg.domain));
         case 'startCooldown': return sendResponse(await startCooldown(msg.domain));
+        case 'logBlock': return sendResponse(await logBlock(msg.domain));
         case 'grantAllowance': return sendResponse(await grantAllowance(msg.domain, msg.reason));
         case 'enrollTeam': return sendResponse(await enrollTeam(msg.serverUrl, msg.code, msg.deviceName));
         case 'leaveTeam': return sendResponse(await leaveTeam());

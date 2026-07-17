@@ -97,5 +97,19 @@ ck('relapseStats counts the relapse', stats.allTime >= 1 && stats.thisWeek >= 1)
 ck('normalizeDomain strips scheme/www/path', HB.normalizeDomain('HTTPS://WWW.Foo.com/bar') === 'foo.com');
 ck('normalizeDomain empty', HB.normalizeDomain('   ') === '');
 
+// ===== time saved: logBlock + dedup + timeSavedStats =====
+store.blockLog = [];
+await msg('logBlock', { domain: 'instagram.com' });
+ck('logBlock records a blocked visit', (store.blockLog || []).length === 1, 'len=' + (store.blockLog || []).length);
+await msg('logBlock', { domain: 'instagram.com' });
+ck('logBlock dedupes same domain within 10 min', store.blockLog.length === 1, 'len=' + store.blockLog.length);
+await msg('logBlock', { domain: 'youtube.com' });
+ck('logBlock records a different domain', store.blockLog.length === 2, 'len=' + store.blockLog.length);
+// simulate an older block outside the dedup window
+store.blockLog.push({ domain: 'x.com', ts: Date.now() - 8 * 24 * 3600e3 });
+const saved = HB.timeSavedStats(store.blockLog, Date.now());
+ck('timeSavedStats: all-time = blocks x 15 min', saved.allMin === 3 * HB.MIN_PER_BLOCK, 'allMin=' + saved.allMin);
+ck('timeSavedStats: this-week excludes the 8-day-old block', saved.weekMin === 2 * HB.MIN_PER_BLOCK, 'weekMin=' + saved.weekMin);
+
 console.log('\n==== ' + pass + ' passed, ' + fail + ' failed ====');
 process.exit(fail ? 1 : 0);

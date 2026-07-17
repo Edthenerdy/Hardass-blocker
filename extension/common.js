@@ -10,9 +10,13 @@ const HB = {
     allowances: {},
     cooldowns: {},
     relapseLog: [],
+    blockLog: [],
     team: null,
     policy: null
   },
+
+  // Rough minutes "saved" per blocked visit — powers the encouraging time-saved stat.
+  MIN_PER_BLOCK: 15,
 
   isManaged(state) {
     return !!(state && state.team && state.team.deviceToken);
@@ -49,7 +53,8 @@ const HB = {
       allowances: { ...(stored.allowances || {}) },
       cooldowns: { ...(stored.cooldowns || {}) },
       blocklist: stored.blocklist || [],
-      relapseLog: stored.relapseLog || []
+      relapseLog: stored.relapseLog || [],
+      blockLog: stored.blockLog || []
     };
   },
 
@@ -79,6 +84,15 @@ const HB = {
       avgGranted,
       lastTs: last ? last.ts : null
     };
+  },
+
+  // Encouraging counterpart to relapseStats: how much time the blocks (probably)
+  // saved. Each blocked visit counts as MIN_PER_BLOCK minutes — this week + all-time.
+  timeSavedStats(blockLog, now) {
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const all = (blockLog || []).length;
+    const week = (blockLog || []).filter(b => b.ts >= weekAgo).length;
+    return { allCount: all, weekCount: week, allMin: all * HB.MIN_PER_BLOCK, weekMin: week * HB.MIN_PER_BLOCK };
   }
 };
 
