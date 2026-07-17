@@ -179,7 +179,7 @@ button{width:100%;margin-top:20px;background:#FF3B30;color:#fff;border:0;border-
 a{color:#9A9CA3;font-size:12px;display:block;text-align:center;margin-top:14px}
 </style></head><body><div class="card">
 <div class="test">Simulated checkout — no real card, no charge. Set STRIPE_SECRET_KEY for live Stripe.</div>
-<h1>${cs.label}</h1><p class="muted">Deadbolt</p>
+<h1>${cs.label}</h1><p class="muted">Holdfast</p>
 <div class="row"><span>Plan</span><span>${cs.label}</span></div>${seatLine}
 <div class="total"><span>Total</span><span>${money(cs.amount)}${cs.kind === 'team' ? '/mo' : ''}</span></div>
 <button id="pay"${paid ? ' disabled' : ''}>${paid ? 'Paid ✓' : 'Pay ' + money(cs.amount) + ' (test)'}</button>
@@ -570,8 +570,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log('Deadbolt server running:');
-  console.log('  Admin console:  http://localhost:' + PORT + '/console/   (admin@northshore.example / deadbolt)');
+  console.log('Holdfast server running:');
+  console.log('  Admin console:  http://localhost:' + PORT + '/console/   (admin@northshore.example / holdfast)');
   console.log('  Device client:  http://localhost:' + PORT + '/device/     (enrollment code NSD-4K9-QX2)');
   console.log('  Consumer app:   http://localhost:' + PORT + '/account/');
   console.log('  Billing:        ' + (billing.useStripe() ? 'REAL Stripe (STRIPE_SECRET_KEY set)' : 'SIMULATED (set STRIPE_SECRET_KEY for live)'));

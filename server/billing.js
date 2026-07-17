@@ -11,10 +11,10 @@ const MONTH = 30 * 24 * 3600 * 1000;
 const PLANS = {
   consumer: {
     free: { id: 'free', label: 'Free', amount: 0, interval: null },
-    pro_monthly: { id: 'pro_monthly', label: 'Deadbolt Pro (monthly)', amount: 900, interval: 'month' }
+    pro_monthly: { id: 'pro_monthly', label: 'Holdfast Pro (monthly)', amount: 900, interval: 'month' }
   },
   team: {
-    team_monthly: { id: 'team_monthly', label: 'Deadbolt for Teams (per seat)', unitAmount: 400, interval: 'month', minSeats: 3 }
+    team_monthly: { id: 'team_monthly', label: 'Holdfast for Teams (per seat)', unitAmount: 400, interval: 'month', minSeats: 3 }
   }
 };
 

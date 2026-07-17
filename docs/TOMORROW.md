@@ -15,8 +15,8 @@ Your total time below ≈ **1.5–2 hours**, most of it the Web Store form + smo
 **0–1. Repo reconciliation — DONE.** `main` is now the single canonical **Holdfast**
 source of truth: this session's tested consumer extension + tests + launch kit,
 layered over the backend/SaaS work (`account/`, `server/` billing, Docker) that was
-on the old `main`. The old `main` (Deadbolt-branded) is preserved at
-`archive/deadbolt-main`; all PRs are closed. Nothing to merge — just work off `main`.
+on the old `main`. The old `main` (Holdfast-branded) is preserved at
+`archive/holdfast-main`; all PRs are closed. Nothing to merge — just work off `main`.
 (A few feature branches remain with unique unmerged bits — see the branch note at the
 bottom; delete at will.)
 

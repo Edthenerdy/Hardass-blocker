@@ -18,7 +18,7 @@ Every other blocker is polite. It asks nicely, then folds the moment you push ba
 
 - **Strength:** memorable, on-brand, and it stands out in an app store full of earnest "Focus / Freedom / Flow" names. It *tells you what it does to you.*
 - **Known constraint:** the word "hardass" is a hurdle for the SME/enterprise phase — an office manager won't expense "Hardass Blocker," and app stores / procurement get twitchy about mild profanity.
-- **Resolution (recommended):** keep **Hardass Blocker** as the consumer-facing brand, and reserve a clean B2B brand for the SME tier running the *same engine* (candidates: **Deadbolt**, **Hardline**, **Ironclad**). Decide before the SME launch, not now. For the POC and individual product, Hardass is exactly right.
+- **Resolution (recommended):** keep **Hardass Blocker** as the consumer-facing brand, and reserve a clean B2B brand for the SME tier running the *same engine* (candidates: **Holdfast**, **Hardline**, **Ironclad**). Decide before the SME launch, not now. For the POC and individual product, Hardass is exactly right.
 
 ---
 
@@ -49,11 +49,11 @@ The name is literally *hard as a rock*, so the consumer brand gets a mascot; the
 
 **Consumer — "Rocky", the hardass rock.** A cute-but-tough granite pebble with a stern brow and a flat, determined mouth, sitting on the Redline tile. Grumpy, not angry; on your side, but immovable. This is the face of **Hardass Blocker** — memorable, sticker-able, and it makes "the block that won't budge" adorable instead of hostile. Speckle texture on the stone ties to the granite texture (§7a).
 
-**B2B — the deadbolt.** The original geometric glyph — a rounded housing with a bar thrown across it — stays as the mark for **Deadbolt for Teams**. Serious, procurement-friendly, "locked, deliberately."
+**B2B — the holdfast.** The original geometric glyph — a rounded housing with a bar thrown across it — stays as the mark for **Holdfast for Teams**. Serious, procurement-friendly, "locked, deliberately."
 
 **Wordmark:** `HARDASS` in a heavy grotesque, tight tracking, all caps; `BLOCKER` lighter/smaller beneath or trailing. The weight contrast *is* the attitude.
 
-**Do:** keep the mascot on the Redline tile; keep the face simple enough to read at 16px. Use the deadbolt for anything B2B.
+**Do:** keep the mascot on the Redline tile; keep the face simple enough to read at 16px. Use the holdfast for anything B2B.
 **Don't:** make Rocky *smile* (he's stoic, not cheerful), add gradients, or outline the wordmark.
 
 *(See the rendered brand board for both marks.)*
@@ -113,7 +113,7 @@ Rule: **one loud typeface, one quiet one.** Never two loud.
 ## 8. Applications
 
 - **Blocked page:** Ink background, Redline bar, big Bone headline ("Blocked. On purpose."), Amber Cooldown countdown, small Ash relapse stats. The flagship brand surface — get this right first.
-- **Extension icon:** solid deadbolt glyph, Redline on Ink.
+- **Extension icon:** solid holdfast glyph, Redline on Ink.
 - **SME console (Phase 2):** dial the humour down, keep the palette; swap to the clean B2B name. Same bones, adult-in-the-room tone.
 
 ---

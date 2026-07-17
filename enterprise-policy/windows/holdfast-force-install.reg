@@ -1,7 +1,7 @@
 Windows Registry Editor Version 5.00
 
 ; ===================================================================
-; Deadbolt Blocker — force-install policy for Google Chrome
+; Holdfast Blocker — force-install policy for Google Chrome
 ; Makes the extension UNREMOVABLE and UN-DISABLEABLE by the end user.
 ; Deploy via GPO, Intune, or a login script (right-click > Merge).
 ; Extension ID: mdfcmhkfkelkdhjbjddmkmjkmobijbgc

@@ -14,7 +14,7 @@ issues found and fixed; one product decision flagged.
 
 ## Fixed
 1. **Brand mark was inconsistent.** The welcome page, landing page, and all store
-   assets (screenshots, promo tile, marquee) used the *deadbolt* mark, but the
+   assets (screenshots, promo tile, marquee) used the *holdfast* mark, but the
    actual shipping icon (`icons/icon128.png`) and the popup/options/blocked pages
    use the *Rocky granite-face*. A user would see one icon in the store and a
    different one in the product. **Fix:** unified everything on the real Rocky

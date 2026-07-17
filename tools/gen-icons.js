@@ -1,5 +1,5 @@
 'use strict';
-// Renders the Deadbolt glyph (red housing + thrown bolt) to PNG
+// Renders the Holdfast glyph (red housing + thrown bolt) to PNG
 // icons, dependency-free. Run: node tools/gen-icons.js
 const fs = require('node:fs');
 const zlib = require('node:zlib');
@@ -58,7 +58,7 @@ function draw(size) {
   const s = size / 120;
   const RED = hex('#FF3B30'), INK = hex('#0E0E10');
 
-  // Deadbolt glyph: red rounded housing, a thrown bolt bar + thumbturn in ink.
+  // Holdfast glyph: red rounded housing, a thrown bolt bar + thumbturn in ink.
   const housing = roundRect(20 * s, 20 * s, 100 * s, 100 * s, 20 * s);
   const bar = roundRect(34 * s, 54 * s, 88 * s, 66 * s, 6 * s);
   const turn = circle(44 * s, 60 * s, 12 * s);

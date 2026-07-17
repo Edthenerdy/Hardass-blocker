@@ -14,7 +14,7 @@
 
 ---
 
-## Individual user (Deadbolt Blocker) — scorecard
+## Individual user (Holdfast Blocker) — scorecard
 
 | Criterion | Result |
 |---|---|
@@ -31,7 +31,7 @@
 
 **Verdict:** A polished, on-brand prototype whose flows all work. **Not ready to charge real consumers** until Pro entitlement is server-verified (today a technical user can flip a stored flag to unlock Pro without paying) and lapses auto-re-check.
 
-## Business user (Deadbolt for Teams) — scorecard
+## Business user (Holdfast for Teams) — scorecard
 
 | Criterion | Result |
 |---|---|

@@ -2,7 +2,7 @@
 const { hashPassword } = require('./auth');
 
 module.exports = function seed() {
-  const { salt, hash } = hashPassword('deadbolt');
+  const { salt, hash } = hashPassword('holdfast');
   const YEAR = 365 * 24 * 3600 * 1000;
   return {
     orgs: [
