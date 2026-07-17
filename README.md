@@ -1,10 +1,10 @@
-# Hardass Blocker
+# Holdfast
 
 **The blocker you can't talk your way out of.**
 
-> **Naming:** the individual product now ships on the Chrome Web Store as **Holdfast** (see `docs/`). This repo keeps "Hardass Blocker" as its working name; the SME/enterprise tier is **Holdfast for Teams**. A full project rename to Holdfast is optional — tracked in `docs/LAUNCH-PROGRESS.md`.
+> **Naming:** the individual product now ships on the Chrome Web Store as **Holdfast** (see `docs/`). This repo keeps "Holdfast" as its working name; the SME/enterprise tier is **Holdfast for Teams**. A full project rename to Holdfast is optional — tracked in `docs/LAUNCH-PROGRESS.md`.
 
-Every website blocker fails at the same moment — the one-click "just disable it for a sec" when self-control is weakest. Hardass Blocker makes *unblocking* deliberately hard: a mandatory cooldown, a written reason, and a look at your own relapse history before you're let back in.
+Every website blocker fails at the same moment — the one-click "just disable it for a sec" when self-control is weakest. Holdfast makes *unblocking* deliberately hard: a mandatory cooldown, a written reason, and a look at your own relapse history before you're let back in.
 
 This repo contains the concept, the brand, and a working proof-of-concept.
 
@@ -18,7 +18,7 @@ This repo contains the concept, the brand, and a working proof-of-concept.
 | [`docs/BRAND.md`](docs/BRAND.md) | Brand guide — voice, two-mark logo system (Rocky + holdfast), palette, granite texture |
 | [`docs/MOAT.md`](docs/MOAT.md) | Circumvention-resistance strategy — the layered defense and its honest limits |
 | [`enterprise-policy/`](enterprise-policy/) | Chrome/Edge force-install policy — makes the extension unremovable without MDM |
-| [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Hardass" product) |
+| [`extension/`](extension/) | Individual POC — a Manifest V3 Chrome extension (the consumer "Holdfast" product) |
 | [`server/`](server/) | Enterprise POC backend — Node.js API (auth, policy sync, approvals, telemetry) |
 | [`console/`](console/) | Enterprise POC — the admin console (Holdfast for Teams) |
 | [`device/`](device/) | Enterprise POC — a managed-device client that enrols and enforces policy |
@@ -26,7 +26,7 @@ This repo contains the concept, the brand, and a working proof-of-concept.
 
 There are two products here sharing one idea, matching the business plan's two phases:
 
-1. **Hardass Blocker** (`extension/`) — the individual product. Self-discipline via the Cooldown.
+1. **Holdfast** (`extension/`) — the individual product. Self-discipline via the Cooldown.
 2. **Holdfast for Teams** (`server/` + `console/` + `device/`) — the SME product. The *same enforcement idea*, but the admin holds the key. This is the part that has no equivalent on the market (Freedom has a team tier but refuses to enforce; MDM is overkill).
 
 ---

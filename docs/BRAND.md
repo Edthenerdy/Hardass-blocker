@@ -1,4 +1,4 @@
-# Hardass Blocker — Brand Guide
+# Holdfast — Brand Guide
 
 *v0.1 · July 2026*
 
@@ -6,7 +6,7 @@
 
 ## 1. The idea
 
-Every other blocker is polite. It asks nicely, then folds the moment you push back. Hardass Blocker doesn't. The brand is **tough love, made honest**: it's on your side, but it will not be talked out of it. Blunt, dry, a little funny, never cruel. The kind of friend who says "no" and means it — and you thank them later.
+Every other blocker is polite. It asks nicely, then folds the moment you push back. Holdfast doesn't. The brand is **tough love, made honest**: it's on your side, but it will not be talked out of it. Blunt, dry, a little funny, never cruel. The kind of friend who says "no" and means it — and you thank them later.
 
 **Brand promise:** *The blocker you can't talk your way out of.*
 
@@ -14,11 +14,11 @@ Every other blocker is polite. It asks nicely, then folds the moment you push ba
 
 ## 2. Name
 
-**Hardass Blocker.** Committed (it's the product and the repo).
+**Holdfast.** Committed (it's the product and the repo).
 
 - **Strength:** memorable, on-brand, and it stands out in an app store full of earnest "Focus / Freedom / Flow" names. It *tells you what it does to you.*
-- **Known constraint:** the word "hardass" is a hurdle for the SME/enterprise phase — an office manager won't expense "Hardass Blocker," and app stores / procurement get twitchy about mild profanity.
-- **Resolution (recommended):** keep **Hardass Blocker** as the consumer-facing brand, and reserve a clean B2B brand for the SME tier running the *same engine* (candidates: **Holdfast**, **Hardline**, **Ironclad**). Decide before the SME launch, not now. For the POC and individual product, Hardass is exactly right.
+- **Known constraint:** the word "holdfast" is a hurdle for the SME/enterprise phase — an office manager won't expense "Holdfast," and app stores / procurement get twitchy about mild profanity.
+- **Resolution (recommended):** keep **Holdfast** as the consumer-facing brand, and reserve a clean B2B brand for the SME tier running the *same engine* (candidates: **Holdfast**, **Hardline**, **Ironclad**). Decide before the SME launch, not now. For the POC and individual product, Holdfast is exactly right.
 
 ---
 
@@ -47,7 +47,7 @@ Every other blocker is polite. It asks nicely, then folds the moment you push ba
 
 The name is literally *hard as a rock*, so the consumer brand gets a mascot; the B2B brand keeps the serious glyph. Two marks, one family, same Redline tile.
 
-**Consumer — "Rocky", the hardass rock.** A cute-but-tough granite pebble with a stern brow and a flat, determined mouth, sitting on the Redline tile. Grumpy, not angry; on your side, but immovable. This is the face of **Hardass Blocker** — memorable, sticker-able, and it makes "the block that won't budge" adorable instead of hostile. Speckle texture on the stone ties to the granite texture (§7a).
+**Consumer — "Rocky", the holdfast rock.** A cute-but-tough granite pebble with a stern brow and a flat, determined mouth, sitting on the Redline tile. Grumpy, not angry; on your side, but immovable. This is the face of **Holdfast** — memorable, sticker-able, and it makes "the block that won't budge" adorable instead of hostile. Speckle texture on the stone ties to the granite texture (§7a).
 
 **B2B — the holdfast.** The original geometric glyph — a rounded housing with a bar thrown across it — stays as the mark for **Holdfast for Teams**. Serious, procurement-friendly, "locked, deliberately."
 

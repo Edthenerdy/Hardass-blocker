@@ -7,7 +7,7 @@
 ---
 
 ## ✅ Done overnight (Claude)
-- ✅ **Rebranded** extension to **Holdfast — Website Blocker**, v1.0.0; description trimmed to the 132-char store limit; signing key kept (ID pinned). No "Hardass" left in the UI.
+- ✅ **Rebranded** extension to **Holdfast — Website Blocker**, v1.0.0; description trimmed to the 132-char store limit; signing key kept (ID pinned). No "Holdfast" left in the UI.
 - ✅ **Privacy policy** — `docs/privacy.html` (GitHub Pages ready).
 - ✅ **Store submission pack** — `docs/STORE-LISTING.md` (name, description, single purpose, per-permission justifications, data declarations).
 - ✅ **Store screenshots** — 4× 1280×800 in `docs/store-assets/` (cooldown, popup, settings/history, "Nice try") + **promo tile** 440×280.
