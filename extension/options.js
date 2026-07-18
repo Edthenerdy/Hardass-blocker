@@ -39,6 +39,23 @@
     const managed = HB.isManaged(state);
     team.unmanaged.hidden = managed;
     team.managed.hidden = !managed;
+
+    // On a managed device the personal/Pro sections don't apply — an admin sets
+    // the policy. Hide the consumer upsell entirely, and make personal rules
+    // read-only with a clear note (don't show editable fields that do nothing).
+    const proCard = document.getElementById('proCard');
+    const personalNote = document.getElementById('personalNote');
+    if (proCard) proCard.hidden = managed;
+    if (personalNote) {
+      personalNote.innerHTML = managed
+        ? 'This device is <strong>managed by ' + esc((state.policy || {}).org || 'your organization') + '</strong> — these personal rules are locked and the org\'s policy applies instead.'
+        : 'Used when this device is <em>not</em> managed by a team.';
+    }
+    ['cooldown', 'allowance', 'reasonChars', 'reasonBypass', 'saveBtn'].forEach(id => {
+      const elm = document.getElementById(id);
+      if (elm) elm.disabled = managed;
+    });
+
     if (managed) {
       const p = state.policy || {};
       const locked = p.enforcement === 'locked';
@@ -168,28 +185,43 @@
     linkBtn: document.getElementById('proLinkBtn'),
     msg: document.getElementById('proMsg'),
     syncBtn: document.getElementById('proSyncBtn'),
+    upgradeBtn: document.getElementById('proUpgradeBtn'),
     manageBtn: document.getElementById('proManageBtn'),
     unlinkBtn: document.getElementById('proUnlinkBtn'),
     msg2: document.getElementById('proMsg2')
   };
 
+  const comingSoon = document.getElementById('proComingSoon');
+  const serverShown = document.getElementById('proServerShown');
+
   async function loadPro() {
     const state = await HB.get();
     const linked = !!(state.pro && state.pro.token);
-    proEl.unlinked.hidden = linked;
+    const isPro = HB.isPro(state);
+    // Pro sign-ups only exist once an account server is configured. Until then,
+    // show "coming soon" instead of a form that sends a password to nowhere.
+    const serverConfigured = !!HB.PRO_SERVER || linked;
     proEl.linked.hidden = !linked;
+    proEl.unlinked.hidden = linked || !serverConfigured;
+    if (comingSoon) comingSoon.hidden = linked || serverConfigured;
+    if (serverShown && HB.PRO_SERVER) { try { serverShown.textContent = new URL(HB.PRO_SERVER).host; } catch (e) {} }
+    if (proEl.server && HB.PRO_SERVER && !proEl.server.value) proEl.server.value = HB.PRO_SERVER;
+
+    proEl.upgradeBtn.hidden = !(linked && !isPro);
+    proEl.manageBtn.hidden = !(linked && isPro);
     if (linked) {
-      proEl.status.textContent = HB.isPro(state)
+      proEl.status.textContent = isPro
         ? 'Pro active — linked as ' + state.pro.email + '. Unlimited sites, full history.'
-        : 'Linked as ' + state.pro.email + ' — free plan. Upgrade for unlimited sites, schedules and full history ($7.99/mo).';
+        : 'Linked as ' + state.pro.email + ' — free plan. Upgrade for unlimited sites and your full history ($7.99/mo).';
     } else {
-      proEl.status.textContent = 'Free plan — up to ' + HB.FREE_MAX_SITES + ' blocked sites and ' + HB.FREE_HISTORY_DAYS + ' days of history. Pro is $7.99/mo: unlimited sites, schedules, full history.';
+      proEl.status.textContent = 'Free plan — up to ' + HB.FREE_MAX_SITES + ' blocked sites and ' + HB.FREE_HISTORY_DAYS + ' days of history. Pro is $7.99/mo: unlimited sites and your full history.';
     }
   }
 
   proEl.linkBtn.addEventListener('click', async () => {
     proEl.msg.textContent = 'Linking…';
-    const res = await chrome.runtime.sendMessage({ type: 'proLink', serverUrl: proEl.server.value.trim(), email: proEl.email.value.trim(), password: proEl.password.value });
+    const server = (proEl.server && proEl.server.value.trim()) || HB.PRO_SERVER;
+    const res = await chrome.runtime.sendMessage({ type: 'proLink', serverUrl: server, email: proEl.email.value.trim(), password: proEl.password.value });
     proEl.msg.textContent = res && res.ok ? 'Linked.' : ((res && res.error) || 'Failed');
     proEl.password.value = '';
     if (res && res.ok) { loadPro(); load(); }
@@ -200,6 +232,10 @@
     proEl.msg2.textContent = res && res.ok ? 'Up to date.' : ((res && res.error) || 'Failed');
     loadPro(); load();
     setTimeout(() => { proEl.msg2.textContent = ''; }, 1800);
+  });
+  proEl.upgradeBtn.addEventListener('click', async () => {
+    const state = await HB.get();
+    try { chrome.tabs.create({ url: HB.upgradeUrl(state, 'options-upgrade') }); } catch (e) { /* noop */ }
   });
   proEl.manageBtn.addEventListener('click', async () => {
     const state = await HB.get();

@@ -226,7 +226,7 @@ async function api(req, res, pathname) {
   if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'user' && seg[2] === 'signup') {
     const body = await readBody(req);
     const email = String(body.email || '').trim().toLowerCase();
-    if (!validEmail(email) || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'A valid email and a 6+ char password are required' });
+    if (!validEmail(email) || String(body.password || '').length < 8) return send(res, 400, { ok: false, error: 'A valid email and an 8+ char password are required' });
     if (data.users.some(u => u.email === email)) return send(res, 409, { ok: false, error: 'Account already exists — sign in instead' });
     const { salt, hash } = hashPassword(String(body.password));
     const user = { id: newId('usr'), email, salt, hash, plan: 'free', proUntil: null, lifetime: false, createdAt: Date.now() };
@@ -255,7 +255,7 @@ async function api(req, res, pathname) {
   if (method === 'POST' && seg[0] === 'auth' && seg[1] === 'org' && seg[2] === 'signup') {
     const body = await readBody(req);
     const email = String(body.email || '').trim().toLowerCase();
-    if (!validEmail(email) || String(body.password || '').length < 6) return send(res, 400, { ok: false, error: 'A valid email and a 6+ char password are required' });
+    if (!validEmail(email) || String(body.password || '').length < 8) return send(res, 400, { ok: false, error: 'A valid email and an 8+ char password are required' });
     if (data.admins.some(a => a.email.toLowerCase() === email)) return send(res, 409, { ok: false, error: 'Admin already exists — sign in instead' });
     const { salt, hash } = hashPassword(String(body.password));
     // Create a fresh, isolated organization with a starter group + unique code.

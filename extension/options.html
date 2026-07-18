@@ -18,9 +18,9 @@
       </div>
     </header>
 
-    <section class="card">
+    <section class="card" id="personalCard">
       <h2>Personal rules</h2>
-      <p class="note">Used when this device is <em>not</em> managed by a team.</p>
+      <p class="note" id="personalNote">Used when this device is <em>not</em> managed by a team.</p>
       <div class="field">
         <label for="cooldown">Cooldown before you can unblock</label>
         <div class="inline"><input id="cooldown" type="number" min="1" max="180" /> <span>minutes</span></div>
@@ -44,28 +44,34 @@
       <span id="saveMsg" class="saveMsg"></span>
     </section>
 
-    <section class="card">
+    <section class="card" id="proCard">
       <h2>Holdfast Pro</h2>
-      <p id="proStatus" class="note">Free plan — up to 5 blocked sites and 7 days of history. Pro is $7.99/mo: unlimited sites, schedules, full history.</p>
-      <div id="proUnlinked">
-        <div class="field">
-          <label for="proServer">Account server</label>
-          <input id="proServer" type="text" placeholder="https://app.holdfast.example" />
-        </div>
+      <p id="proStatus" class="note">Free plan — up to 5 blocked sites and 7 days of history. Pro is $7.99/mo: unlimited sites and your full history.</p>
+      <p id="proComingSoon" class="note" hidden>Holdfast Pro sign-ups aren't open yet — the account isn't live. The free plan (5 sites, 7-day history, the full Cooldown) has no account and works forever.</p>
+      <div id="proUnlinked" hidden>
         <div class="field">
           <label for="proEmail">Email</label>
           <input id="proEmail" type="email" placeholder="you@example.com" />
         </div>
         <div class="field">
           <label for="proPassword">Password</label>
-          <input id="proPassword" type="password" placeholder="6+ characters" />
+          <input id="proPassword" type="password" placeholder="8+ characters" />
         </div>
         <button id="proLinkBtn" class="primary">Sign in / create account</button>
         <span id="proMsg" class="saveMsg"></span>
+        <p class="note" id="proServerLine">Connects to <strong id="proServerShown">the Holdfast account server</strong>. Payments via Stripe.</p>
+        <details class="advPro">
+          <summary style="cursor:pointer;color:var(--ash);font-size:12px">Advanced: use a custom server</summary>
+          <div class="field" style="margin-top:8px">
+            <label for="proServer">Account server URL</label>
+            <input id="proServer" type="text" placeholder="https://your-server" />
+          </div>
+        </details>
       </div>
       <div id="proLinked" hidden>
+        <button id="proUpgradeBtn" class="primary" hidden>Upgrade to Pro — $7.99/mo</button>
+        <button id="proManageBtn" class="ghost" hidden>Manage subscription</button>
         <button id="proSyncBtn" class="ghost">Refresh status</button>
-        <button id="proManageBtn" class="ghost">Manage subscription</button>
         <button id="proUnlinkBtn" class="ghost">Unlink</button>
         <span id="proMsg2" class="saveMsg"></span>
       </div>
@@ -73,7 +79,7 @@
 
     <section class="card">
       <h2>Your history</h2>
-      <p class="note">Every time you talked yourself into unblocking something. No editing — that's the point.</p>
+      <p class="note">Every time you talked yourself into unblocking something. You can't tidy individual entries away — it's all here or you wipe the lot. Your call; it's your device.</p>
       <div id="logWrap">
         <table id="logTable" class="log" hidden>
           <thead><tr><th>When</th><th>Site</th><th>Reason you gave</th></tr></thead>

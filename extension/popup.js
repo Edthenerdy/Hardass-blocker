@@ -48,7 +48,7 @@
       left.appendChild(site);
       const allow = (p.allowances || []).find(a => a.domain === domain && a.expiresAt > now);
       const status = document.createElement('span'); status.className = 'status';
-      if (allow) { status.textContent = 'open ' + Math.ceil((allow.expiresAt - now) / 60000) + 'm'; }
+      if (allow) { status.textContent = Math.ceil((allow.expiresAt - now) / 60000) + 'm left'; }
       else { status.textContent = 'enforced'; status.classList.add('managed'); }
       left.appendChild(status);
       li.appendChild(left);
@@ -68,7 +68,7 @@
         const saved = HB.timeSavedStats(state.blockLog, Date.now());
         const held = HB.daysHeld(state.meta, Date.now());
         winStrip.textContent = '🛡 ' + HB.fmtMinutes(saved.weekMin) + ' saved this week · ' +
-          held.current + (held.current === 1 ? ' day held' : ' days held');
+          (held.current === 0 ? 'holding since today' : held.current + (held.current === 1 ? ' day held' : ' days held'));
       } else {
         winStrip.textContent = '🛡 Block your first site to start saving time.';
       }
@@ -91,7 +91,7 @@
       left.appendChild(site);
       const allowedUntil = state.allowances[entry.domain];
       const status = document.createElement('span'); status.className = 'status';
-      if (allowedUntil && allowedUntil > now) status.textContent = 'open ' + Math.ceil((allowedUntil - now) / 60000) + 'm';
+      if (allowedUntil && allowedUntil > now) status.textContent = Math.ceil((allowedUntil - now) / 60000) + 'm left';
       else { status.textContent = 'blocked'; status.classList.add('blocked'); }
       left.appendChild(status);
 

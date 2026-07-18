@@ -21,8 +21,12 @@ const HB = {
   // never gated — the aha moment stays free.
   FREE_MAX_SITES: 5,
   FREE_HISTORY_DAYS: 7,
-  // Where "Upgrade" goes before the account server is configured (landing page).
-  UPGRADE_FALLBACK: 'https://edthenerdy.github.io/Hardass-blocker/',
+  // The Holdfast Pro account/billing server. EMPTY until deployed — while empty,
+  // the extension shows "Pro coming soon" instead of a broken sign-in form.
+  // Set this to the deployed URL (e.g. https://app.holdfast.app) to open sign-ups.
+  PRO_SERVER: '',
+  // Where "Upgrade" goes before the account server is configured (landing pricing).
+  UPGRADE_FALLBACK: 'https://edthenerdy.github.io/Hardass-blocker/#pricing',
 
   // Rough minutes "saved" per blocked visit — powers the encouraging time-saved stat.
   MIN_PER_BLOCK: 15,

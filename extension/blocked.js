@@ -40,6 +40,12 @@
 
   el.backBtn.addEventListener('click', () => {
     if (poll) clearInterval(poll);
+    if (isPreview) {
+      // Preview opens in its own tab — "close" should actually close it.
+      try { chrome.tabs.getCurrent(t => { if (t && t.id != null && chrome.tabs.remove) chrome.tabs.remove(t.id); else window.close(); }); }
+      catch (e) { window.close(); }
+      return;
+    }
     if (history.length > 1) history.back(); else location.href = 'about:blank';
   });
 
@@ -50,12 +56,15 @@
     msg('telemetry', { domain, event: 'blocked' });
 
     el.stats.hidden = true;
+    // Personal-mode "Start the cooldown" is meaningless here; managed-cooldown
+    // mode re-shows it below. Prevents a bright primary button that does nothing.
+    el.startBtn.hidden = true;
     el.sub.innerHTML = esc(domain) + ' — blocked by <strong>' + esc(policy.org || 'your organization') + '</strong> · ' + esc(policy.group || '');
 
     if (policy.unblockMode === 'none') {
       el.headline.textContent = 'Blocked.';
       el.timer.style.display = 'none';
-      el.timerCap.textContent = 'Your policy does not allow unblocking. Talk to your admin.';
+      el.timerCap.textContent = 'Your policy does not allow unblocking. Talk to your admin to change it.';
       return;
     }
     if (policy.unblockMode === 'admin-approval') return managedApproval(policy);
@@ -123,6 +132,7 @@
 
     if (cd && cd.endsAt) { endsAt = cd.endsAt; showRunning(); }
     else {
+      el.startBtn.hidden = false; // legit here: cooldown mode needs a start control
       el.timer.textContent = fmt(cooldownMs);
       el.timerCap.textContent = 'A ' + (policy.cooldownMinutes || 15) + '-minute wait stands between you and this site.';
     }
@@ -160,7 +170,10 @@
     const rows = [];
     // Lead with the encouraging metrics so a disciplined user sees wins, not just zeros.
     if (held) {
-      rows.push(['Days held', held.current + (held.best > held.current ? ' · best ' + held.best : ''), 'good']);
+      // Day zero shouldn't read as "0 days held" — that's deflating, not honest.
+      rows.push(held.current === 0
+        ? ['Holding', 'since today' + (held.best > 0 ? ' · best ' + held.best + 'd' : ''), 'good']
+        : ['Days held', held.current + (held.best > held.current ? ' · best ' + held.best : ''), 'good']);
     }
     if (saved) {
       rows.push(['Time saved this week', fmtMinutes(saved.weekMin), 'good']);
@@ -209,8 +222,14 @@
 
   function updateUnblockState() {
     const remaining = endsAt ? endsAt - Date.now() : Infinity;
+    const done = !!(endsAt && remaining <= 0);
     const reasonOk = el.reason.value.trim().length >= settings.minReasonChars;
-    el.unblockBtn.disabled = !(endsAt && remaining <= 0 && reasonOk);
+    el.unblockBtn.disabled = !(done && reasonOk);
+    // Always say WHY the button is off, so it never reads as broken.
+    el.reasonHint.textContent = !done
+      ? 'The unblock button unlocks when the timer hits zero.'
+      : (!reasonOk ? 'Write at least ' + settings.minReasonChars + ' characters — future-you is reading this.'
+        : 'Ready. But do you actually need it?');
   }
 
   function showCooldownRunning() {
@@ -227,7 +246,7 @@
 
   async function initIndividual(state) {
     settings = state.settings;
-    el.sub.textContent = domain ? domain + ' — on your blocklist since you set it up sober.' : 'This site is on your blocklist.';
+    el.sub.textContent = domain ? domain + ' — you put this on your blocklist. Past-you meant it.' : 'This site is on your blocklist.';
     // Record this blocked visit (deduped in the background), then read fresh so the
     // time-saved counter reflects it. Preview mode (from the welcome page) records nothing.
     if (domain && !isPreview) await msg('logBlock', { domain });
@@ -255,8 +274,12 @@
     // P0.4: preview from the welcome page — show the scene, record nothing.
     // (After the cooldown branch, so its caption wins.)
     if (isPreview) {
-      el.timerCap.textContent = 'Preview — this is what a block feels like. Nothing is recorded.';
+      el.timerCap.textContent = 'Preview — this is what a block feels like. Nothing here is real or recorded.';
       el.startBtn.hidden = true;
+      // No real interaction or (confusing, real-looking) stats in a demo.
+      el.stats.hidden = true;
+      el.reasonLabel.hidden = true; el.reason.hidden = true; el.reasonHint.hidden = true;
+      el.unblockBtn.hidden = true;
       el.backBtn.textContent = 'Got it — close preview';
     }
 
@@ -282,13 +305,15 @@
 
   function initBypass() {
     el.headline.textContent = 'Nice try.';
-    el.sub.textContent = 'Proxies, translators, cache and archive tricks are blocked too. There is no side door.';
+    el.sub.innerHTML = esc(domain || 'That route') + ' is a known way around a blocklist (a proxy, translator, cache or archive), so Holdfast blocks it too.';
     el.timer.style.display = 'none';
-    el.timerCap.textContent = 'This is how you keep a block a block.';
+    // Honest recourse: bypass-blocking can catch legitimate use. Offer the way out.
+    el.timerCap.textContent = 'Using it for something legitimate? Turn off “Block bypass tricks” in Settings — it stays your call.';
     el.stats.hidden = true;
-    // There's nothing to start here — a bypass hit isn't a blocked-site cooldown.
-    // The only sensible action is to go back.
-    el.startBtn.hidden = true;
+    // Repurpose the primary button as a real escape hatch to Settings.
+    el.startBtn.hidden = false;
+    el.startBtn.textContent = 'Open Holdfast settings';
+    el.startBtn.addEventListener('click', () => { try { chrome.runtime.openOptionsPage(); } catch (e) { /* noop */ } });
   }
 
   /* ================= boot ================= */

@@ -134,7 +134,10 @@ reset();
 {
   const { win, doc } = makePage('blocked.html', '?d=translate.google.com&x=1'); await tick();
   ck('bypass shows "Nice try."', /Nice try/.test(doc.body.textContent), doc.body.textContent.slice(0, 40));
-  ck('bypass hides the Start button (no dead control)', doc.getElementById('startBtn').hidden, 'start visible');
+  ck('bypass names the site (not a generic scold)', /translate\.google\.com/.test(doc.getElementById('sub').textContent), doc.getElementById('sub').textContent.slice(0, 50));
+  ck('bypass offers a recourse (turn off in Settings)', /Block bypass tricks/.test(doc.getElementById('timerCap').textContent), doc.getElementById('timerCap').textContent);
+  const bStart = doc.getElementById('startBtn');
+  ck('bypass repurposes the button as a real escape hatch to Settings', !bStart.hidden && /settings/i.test(bStart.textContent), 'text=' + bStart.textContent + ' hidden=' + bStart.hidden);
   let threw = false; try { click(win, doc.getElementById('backBtn')); await tick(); } catch (e) { threw = true; }
   ck('bypass back button works', !threw, 'threw');
 }
@@ -219,6 +222,40 @@ reset();
   ck('free history hides entries older than 7 days', !/ancient/.test(doc.getElementById('logBody').textContent), 'ancient visible');
   const note = doc.getElementById('histUpgrade');
   ck('older history surfaces the contextual Pro note', note && !note.hidden && /Pro thing/.test(note.textContent), note && note.textContent);
+}
+
+console.log('\n== SENSE-MAKING: Pro states + managed hiding ==');
+reset();
+{
+  // not linked, no server configured -> "coming soon", no broken sign-in form
+  const { doc } = makePage('options.html'); await tick();
+  ck('Pro sign-in form hidden until a server is configured', doc.getElementById('proUnlinked').hidden, 'form shown');
+  ck('shows "coming soon" instead of an unfillable form', !doc.getElementById('proComingSoon').hidden, 'no coming-soon');
+}
+reset();
+{
+  // linked but free -> explicit Upgrade button, no ambiguous "Manage subscription"
+  store.pro = { serverUrl: 'https://x', email: 'e@x', token: 't', active: false, plan: 'free', checkedAt: Date.now() };
+  const { doc } = makePage('options.html'); await tick();
+  ck('linked-free shows an explicit Upgrade button', !doc.getElementById('proUpgradeBtn').hidden, 'no upgrade btn');
+  ck('linked-free hides "Manage subscription" (nothing to manage yet)', doc.getElementById('proManageBtn').hidden, 'manage shown');
+}
+reset();
+{
+  // managed device -> no consumer Pro upsell, personal rules locked
+  store.team = { deviceToken: 't', serverUrl: 'https://x', deviceId: 'd' };
+  store.policy = { org: 'Acme', group: 'Team', enforcement: 'locked', unblockMode: 'admin-approval', blocklist: ['a.com'], allowances: [] };
+  const { doc } = makePage('options.html'); await tick();
+  ck('managed device hides the consumer Pro card', doc.getElementById('proCard').hidden, 'pro card shown to managed');
+  ck('managed device locks the personal-rules inputs', doc.getElementById('cooldown').disabled && doc.getElementById('saveBtn').disabled, 'personal rules editable');
+}
+reset();
+{
+  // managed "none" blocked page -> no dead "Start the cooldown" primary button
+  store.team = { deviceToken: 't', serverUrl: 'https://x', deviceId: 'd' };
+  store.policy = { org: 'Acme', group: 'Team', enforcement: 'locked', unblockMode: 'none', cooldownMinutes: 20, allowanceMinutes: 10, blocklist: ['instagram.com'], allowances: [] };
+  const { doc } = makePage('blocked.html', '?d=instagram.com'); await tick();
+  ck('managed-none hides the dead "Start the cooldown" button', doc.getElementById('startBtn').hidden, 'start button visible on none-mode');
 }
 
 console.log('\n==== ' + pass + ' passed, ' + fail + ' failed ====');
