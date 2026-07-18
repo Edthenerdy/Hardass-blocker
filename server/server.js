@@ -538,7 +538,8 @@ async function api(req, res, pathname) {
     const byDomain = {};
     for (const e of blocked) byDomain[e.domain] = (byDomain[e.domain] || 0) + 1;
     const top = Object.entries(byDomain).map(([domain, count]) => ({ domain, count })).sort((a, b) => b.count - a.count).slice(0, 12);
-    return send(res, 200, { ok: true, totalBlocked: blocked.length, top });
+    // Org-wide "time reclaimed": each blocked attempt counts as ~15 min not lost.
+    return send(res, 200, { ok: true, totalBlocked: blocked.length, timeSavedMin: blocked.length * 15, top });
   }
 
   return send(res, 404, { ok: false, error: 'unknown api route' });

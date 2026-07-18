@@ -242,11 +242,20 @@
   }
 
   /* ---------- reports ---------- */
+  function fmtMinutes(min) {
+    min = Math.max(0, Math.round(min || 0));
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? (m ? h + 'h ' + m + 'm' : h + 'h') : m + 'm';
+  }
+
   async function loadReports() {
     const r = await api('/reports');
     if (!r.ok) return;
+    const headline = r.totalBlocked
+      ? '<div class="row"><span><strong>Time reclaimed this week (est.)</strong></span><span style="color:var(--clear);font-weight:600">' + fmtMinutes(r.timeSavedMin) + '</span></div>'
+      : '';
     el.reportList.innerHTML = r.top.length
-      ? r.top.map(x => '<div class="row"><span>' + esc(x.domain) + '</span><span class="muted">' + x.count + ' blocked</span></div>').join('')
+      ? headline + r.top.map(x => '<div class="row"><span>' + esc(x.domain) + '</span><span class="muted">' + x.count + ' blocked</span></div>').join('')
       : '<div class="empty">No blocked attempts logged yet.</div>';
   }
 
