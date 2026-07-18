@@ -136,7 +136,24 @@ checkout starts vs completions (Stripe), trigger-attribution passed as a
 query param (`?src=sixth-site`) so we learn which contextual prompt converts —
 without any user tracking.
 
-## 7. Execution order & effort
+## 7. Execution status (updated after the build day)
+
+**P0 — DONE, all five items** (streak, popup win strip, post-cave moment,
+welcome preview, est. labels). Rendered + verified.
+**P1 — DONE in code:** $7.99 price, extension account link + entitlement (48h
+grace, 180-day tokens), 5-site free cap (3 seeded on install), 7-day free
+history, contextual prompts A (6th site) + B (old history) with `src`
+attribution, options Pro card, honest privacy/store disclosures. **Verified
+end-to-end against the live server** (signup → $7.99 checkout → pay → Pro →
+cap lifts; unlink → wall returns). *Remaining for Edward:* deploy the server,
+add Stripe keys, and set the account-server URL as the extension's default.
+**P2 — not started** (post-launch, feedback-driven).
+**Schedules and strict mode are Pro-advertised but not yet built** — they're
+named in upgrade copy as "Pro takes it to unlimited — plus schedules"; build
+schedules (P2.1) before or shortly after the first Pro sale to keep the promise
+honest, or soften the copy if launching Pro without it.
+
+## 7b. Execution order & effort (original plan)
 
 | # | Item | Effort | Depends on |
 |---|---|---|---|

@@ -1,5 +1,19 @@
 # Tomorrow — get Holdfast live
 
+> **UPDATE (after the P0/P1 build day):** the extension is now **freemium** —
+> free tier (5 sites, 7-day history, full Cooldown, streak + time-saved) and
+> **Pro at $7.99/mo** (unlimited sites, full history; schedules coming). All
+> code is on `main`, 108 automated checks green, money path verified end-to-end
+> in simulated mode. **Two decisions this changes for your launch steps below:**
+> 1. **Submitting now = free-only in practice** (the Pro sign-in points at an
+>    account server you haven't deployed yet — the UI is there but harmless).
+>    Fastest path: submit as-is, declare "Authentication information (optional
+>    sign-in)" on the privacy tab per `STORE-LISTING.md`, then deploy the server
+>    + Stripe when ready — Pro activates without a store re-review.
+> 2. **To take money:** deploy the server (DEPLOY.md §1), add your Stripe keys
+>    (§3), and tell me the deployed URL — I'll set it as the extension's default
+>    account server and rebuild the zip.
+
 **Where it stands:** the individual extension is built, rebranded **Holdfast**, and
 hardened across **70 automated checks** (20 logic + 24 journeys + 26 every-control)
 plus two real-Chromium UX audits. Launch kit (screenshots, promo tiles, demo GIF,
