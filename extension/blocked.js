@@ -1,6 +1,7 @@
 (function () {
   const params = new URLSearchParams(location.search);
   const domain = HB.normalizeDomain(params.get('d') || '');
+  const isPreview = params.get('preview') === '1';
 
   const el = {
     headline: document.getElementById('headline'),
@@ -155,9 +156,12 @@
     return h ? (m ? h + 'h ' + m + 'm' : h + 'h') : m + 'm';
   }
 
-  function renderStats(stats, saved) {
+  function renderStats(stats, saved, held) {
     const rows = [];
-    // Lead with the encouraging metric so a disciplined user sees a win, not just zeros.
+    // Lead with the encouraging metrics so a disciplined user sees wins, not just zeros.
+    if (held) {
+      rows.push(['Days held', held.current + (held.best > held.current ? ' · best ' + held.best : ''), 'good']);
+    }
     if (saved) {
       rows.push(['Time saved this week', fmtMinutes(saved.weekMin), 'good']);
       rows.push(['Time saved, all time', fmtMinutes(saved.allMin), 'good']);
@@ -174,6 +178,13 @@
       if (cls === 'good') b.classList.add('good');
       if (k.startsWith('Times unblocked this week') && stats.thisWeek >= 3) b.classList.add('flag');
       row.append(a, b); el.stats.appendChild(row);
+    }
+    // P0.5: keep the numbers honest — say how "time saved" is estimated.
+    if (saved && (saved.weekMin || saved.allMin)) {
+      const note = document.createElement('div');
+      note.className = 'estNote';
+      note.textContent = 'Time saved is an estimate: ~' + HB.MIN_PER_BLOCK + ' min per blocked visit.';
+      el.stats.appendChild(note);
     }
     el.stats.hidden = rows.length === 0;
   }
@@ -218,16 +229,35 @@
     settings = state.settings;
     el.sub.textContent = domain ? domain + ' — on your blocklist since you set it up sober.' : 'This site is on your blocklist.';
     // Record this blocked visit (deduped in the background), then read fresh so the
-    // time-saved counter reflects it.
-    if (domain) await msg('logBlock', { domain });
+    // time-saved counter reflects it. Preview mode (from the welcome page) records nothing.
+    if (domain && !isPreview) await msg('logBlock', { domain });
     const fresh = await HB.get();
-    renderStats(HB.relapseStats(fresh.relapseLog, domain, Date.now()), HB.timeSavedStats(fresh.blockLog, Date.now()));
+    renderStats(HB.relapseStats(fresh.relapseLog, domain, Date.now()), HB.timeSavedStats(fresh.blockLog, Date.now()), HB.daysHeld(fresh.meta, Date.now()));
+
+    // P0.3: one-time post-cave note — calm, no shame, the block is simply back on.
+    const reassureEl = document.getElementById('reassure');
+    if (reassureEl && !isPreview && fresh.meta.pendingReassure === domain) {
+      const saved = HB.timeSavedStats(fresh.blockLog, Date.now());
+      reassureEl.textContent = 'Pass over. No drama — the block is back on.' +
+        (saved.weekMin ? ' (You’ve still saved ' + HB.fmtMinutes(saved.weekMin) + ' this week.)' : '');
+      reassureEl.hidden = false;
+      fresh.meta.pendingReassure = null;
+      await HB.set({ meta: fresh.meta });
+    }
 
     const cd = state.cooldowns[domain];
     if (cd) { endsAt = cd.endsAt; showCooldownRunning(); }
     else {
       el.timer.textContent = fmt(settings.cooldownMinutes * 60000);
       el.timerCap.textContent = 'A ' + settings.cooldownMinutes + '-minute wait stands between you and this site.';
+    }
+
+    // P0.4: preview from the welcome page — show the scene, record nothing.
+    // (After the cooldown branch, so its caption wins.)
+    if (isPreview) {
+      el.timerCap.textContent = 'Preview — this is what a block feels like. Nothing is recorded.';
+      el.startBtn.hidden = true;
+      el.backBtn.textContent = 'Got it — close preview';
     }
 
     el.startBtn.addEventListener('click', async () => {

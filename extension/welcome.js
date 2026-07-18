@@ -41,6 +41,14 @@
 
   el.add.addEventListener('click', add);
   el.site.addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+
+  // P0.4: let the user see the Cooldown once, calmly, before temptation ever hits.
+  const tryIt = document.getElementById('tryIt');
+  if (tryIt) tryIt.addEventListener('click', (e) => {
+    e.preventDefault();
+    try { chrome.tabs.create({ url: chrome.runtime.getURL('blocked.html?d=instagram.com&preview=1') }); }
+    catch (err) { location.href = 'blocked.html?d=instagram.com&preview=1'; }
+  });
   // Chrome won't let window.close() close a tab it didn't open (welcome is opened
   // via chrome.tabs.create), so close the current tab through the tabs API,
   // falling back to window.close() where that isn't available.

@@ -126,6 +126,23 @@ button {
 .list .remove.confirm { color: var(--redline); border-color: var(--redline); }
 .list .status.managed { color: var(--redline); }
 
+/* The daily win, up top: time saved + days held. Click-through to history. */
+.winStrip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #12331F;
+  border: 0.5px solid #37D67A;
+  color: #7FE7A9;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.winStrip:hover { color: #B8F2CE; }
+
 /* Long-content + keyboard-focus hardening */
 .list li { gap: 8px; }
 .list li > div { min-width: 0; overflow-wrap: anywhere; }   /* let long domains wrap, not shove the button off */

@@ -45,7 +45,7 @@ function makePage(htmlFile, search = '') {
   win.chrome = {
     storage: { local: { get: (k) => Promise.resolve(getFrom(k)), set: (p) => { Object.assign(store, p); return Promise.resolve(); } } },
     runtime: { sendMessage: (m) => bg(m.type, m), getURL: p => 'chrome-extension://x/' + p, openOptionsPage: () => { openedOptions++; } },
-    tabs: { query: async () => [{ url: 'https://reddit.com/' }], getCurrent: (cb) => cb({ id: 7 }), remove: (id) => { win.__removed = id; } },
+    tabs: { query: async () => [{ url: 'https://reddit.com/' }], getCurrent: (cb) => cb({ id: 7 }), remove: (id) => { win.__removed = id; }, create: (o) => { win.__created = o && o.url; } },
   };
   win.eval(read('common.js'));
   win.eval(read(htmlFile.replace('.html', '.js')));
@@ -65,12 +65,17 @@ console.log('\n== POPUP: every control ==');
 reset();
 {
   const { win, doc } = makePage('popup.html'); await tick();
+  const strip = doc.getElementById('winStrip');
+  ck('popup win strip is visible and leads with the win', strip && !strip.hidden && /saved this week/.test(strip.textContent), strip && strip.textContent);
+  click(win, strip); await tick();
+  ck('popup win strip click opens options', openedOptions >= 1, 'openedOptions=' + openedOptions);
   type(win, doc.getElementById('siteInput'), 'tiktok.com'); click(win, doc.getElementById('addBtn')); await tick();
   ck('popup Block button adds a site', store.blocklist.some(b => b.domain === 'tiktok.com'), 'not added');
   type(win, doc.getElementById('siteInput'), 'espn.com'); enter(win, doc.getElementById('siteInput')); await tick();
   ck('popup Enter key adds a site', store.blocklist.some(b => b.domain === 'espn.com'), 'not added');
+  const beforeOpts = openedOptions;
   click(win, doc.getElementById('optionsBtn')); await tick();
-  ck('popup Settings button opens options', openedOptions === 1, 'openOptionsPage not called');
+  ck('popup Settings button opens options', openedOptions === beforeOpts + 1, 'openOptionsPage not called');
   const rm = doc.querySelector('.remove');
   click(win, rm); await tick();
   ck('Remove step 1: engages think-delay (disabled + Wait)', rm.disabled && /Wait/.test(rm.textContent), rm.textContent);
@@ -102,6 +107,26 @@ reset();
   ck('unblock enables after a valid reason', !unblock.disabled, 'still disabled');
   click(win, unblock); await tick();
   ck('unblock button grants a pass', !!store.allowances['instagram.com'], 'no allowance');
+}
+
+console.log('\n== BLOCKED PAGE: post-cave reassure + preview mode ==');
+reset();
+{
+  store.meta = { installedAt: Date.now() - 10 * 86400000, lastCaveTs: null, bestDaysHeld: 0, pendingReassure: 'instagram.com' };
+  store.blockLog = [{ domain: 'instagram.com', ts: Date.now() - 3600e3 }];
+  const { doc } = makePage('blocked.html', '?d=instagram.com'); await tick();
+  const re = doc.getElementById('reassure');
+  ck('post-cave reassure banner shows once', re && !re.hidden && /No drama/.test(re.textContent), re && re.textContent);
+  ck('reassure flag cleared after showing', store.meta.pendingReassure === null, 'flag=' + store.meta.pendingReassure);
+  ck('stats include "Days held"', /Days held/.test(doc.getElementById('stats').textContent), 'missing');
+  ck('stats include the (est.) honesty note', /estimate/.test(doc.getElementById('stats').textContent), 'missing');
+}
+reset();
+{
+  const before = (store.blockLog || []).length;
+  const { doc } = makePage('blocked.html', '?d=instagram.com&preview=1'); await tick();
+  ck('preview mode records nothing', (store.blockLog || []).length === before, 'blockLog grew');
+  ck('preview mode hides Start + explains itself', doc.getElementById('startBtn').hidden && /Preview/.test(doc.getElementById('timerCap').textContent), doc.getElementById('timerCap').textContent);
 }
 
 console.log('\n== BYPASS PAGE ==');
@@ -150,6 +175,8 @@ reset();
   ck('welcome Enter key adds a site', store.blocklist.some(b => b.domain === 'espn.com'), 'not added');
   const rm = doc.querySelector('#list .rm'); click(win, rm); await tick();
   ck('welcome Remove removes a site', true, ''); // no throw = wired (removal async)
+  click(win, doc.getElementById('tryIt')); await tick();
+  ck('welcome preview link opens the Cooldown preview', /blocked\.html\?d=.*preview=1/.test(win.__created || ''), 'created=' + win.__created);
   click(win, doc.getElementById('start')); await tick();
   ck('welcome Start closes the tab', win.__removed === 7, 'removed=' + win.__removed);
 }

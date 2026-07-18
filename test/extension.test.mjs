@@ -111,5 +111,26 @@ const saved = HB.timeSavedStats(store.blockLog, Date.now());
 ck('timeSavedStats: all-time = blocks x 15 min', saved.allMin === 3 * HB.MIN_PER_BLOCK, 'allMin=' + saved.allMin);
 ck('timeSavedStats: this-week excludes the 8-day-old block', saved.weekMin === 2 * HB.MIN_PER_BLOCK, 'weekMin=' + saved.weekMin);
 
+// ===== P0.1 streak: "days held" =====
+ck('install anchors the streak (installedAt set)', !!(store.meta && store.meta.installedAt));
+const NOW = Date.now(), DAY = 86400000;
+ck('daysHeld: 3.5 days since anchor -> current 3', HB.daysHeld({ installedAt: NOW - 3.5 * DAY }, NOW).current === 3);
+ck('daysHeld: lastCaveTs wins over installedAt', HB.daysHeld({ installedAt: NOW - 30 * DAY, lastCaveTs: NOW - 5 * DAY, bestDaysHeld: 2 }, NOW).current === 5);
+ck('daysHeld: best tops up from current', HB.daysHeld({ installedAt: NOW - 9 * DAY, bestDaysHeld: 4 }, NOW).best === 9);
+// cave banks the run and resets the anchor
+await msg('addBlock', { domain: 'p0test.com' });
+store.meta.lastCaveTs = NOW - 6 * DAY; store.meta.bestDaysHeld = 2;
+await msg('startCooldown', { domain: 'p0test.com' });
+store.cooldowns['p0test.com'].endsAt = Date.now() - 1;
+await msg('grantAllowance', { domain: 'p0test.com', reason: 'testing the streak reset here' });
+ck('cave banks best (6 held > old best 2)', store.meta.bestDaysHeld >= 6, 'best=' + store.meta.bestDaysHeld);
+ck('cave resets current streak to 0', HB.daysHeld(store.meta, Date.now()).current === 0);
+// ===== P0.3 post-cave reassure flag =====
+await fireAlarm('reblock:p0test.com');
+ck('reblock sets the one-time reassure flag', store.meta.pendingReassure === 'p0test.com', 'flag=' + store.meta.pendingReassure);
+// ===== helpers =====
+ck('fmtMinutes: 210 -> "3h 30m"', HB.fmtMinutes(210) === '3h 30m', HB.fmtMinutes(210));
+ck('fmtMinutes: 45 -> "45m"', HB.fmtMinutes(45) === '45m', HB.fmtMinutes(45));
+
 console.log('\n==== ' + pass + ' passed, ' + fail + ' failed ====');
 process.exit(fail ? 1 : 0);

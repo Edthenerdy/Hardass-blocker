@@ -122,7 +122,11 @@ async function grantAllowance(rawDomain, reason) {
   delete state.cooldowns[domain];
   state.relapseLog.push({ domain, ts: Date.now(), reason: reason.trim().slice(0, 300), grantedMin: mins });
   if (state.relapseLog.length > 500) state.relapseLog = state.relapseLog.slice(-500); // bound local storage
-  await HB.set({ allowances: state.allowances, cooldowns: state.cooldowns, relapseLog: state.relapseLog });
+  // Streak bookkeeping: bank the run that just ended, then reset the anchor.
+  const held = HB.daysHeld(state.meta, Date.now());
+  state.meta.bestDaysHeld = held.best;
+  state.meta.lastCaveTs = Date.now();
+  await HB.set({ allowances: state.allowances, cooldowns: state.cooldowns, relapseLog: state.relapseLog, meta: state.meta });
   await applyRules();
   await chrome.alarms.create(REBLOCK_PREFIX + domain, { when: expiresAt });
   return { ok: true, expiresAt, domain };
@@ -132,7 +136,10 @@ async function reblock(domain) {
   const state = await HB.get();
   if (HB.isManaged(state)) return;
   delete state.allowances[domain];
-  await HB.set({ allowances: state.allowances });
+  // P0.3: next visit to this blocked page gets a one-time "no drama, re-armed"
+  // note — the post-cave moment is where guilt turns into uninstalls.
+  state.meta.pendingReassure = domain;
+  await HB.set({ allowances: state.allowances, meta: state.meta });
   await applyRules();
 }
 
@@ -240,6 +247,8 @@ chrome.alarms.onAlarm.addListener(alarm => {
 
 chrome.runtime.onInstalled.addListener(async details => {
   const state = await HB.get();
+  // Anchor the "days held" streak. Set once, for any install kind.
+  if (!state.meta.installedAt) { state.meta.installedAt = Date.now(); await HB.set({ meta: state.meta }); }
   if (details.reason === 'install' && !HB.isManaged(state)) {
     for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) await addBlock(d);
     // First-run: open the welcome page so the user understands the Cooldown

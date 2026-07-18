@@ -11,6 +11,7 @@ const HB = {
     cooldowns: {},
     relapseLog: [],
     blockLog: [],
+    meta: { installedAt: null, lastCaveTs: null, bestDaysHeld: 0 },
     team: null,
     policy: null
   },
@@ -54,7 +55,8 @@ const HB = {
       cooldowns: { ...(stored.cooldowns || {}) },
       blocklist: stored.blocklist || [],
       relapseLog: stored.relapseLog || [],
-      blockLog: stored.blockLog || []
+      blockLog: stored.blockLog || [],
+      meta: { ...base.meta, ...(stored.meta || {}) }
     };
   },
 
@@ -84,6 +86,22 @@ const HB = {
       avgGranted,
       lastTs: last ? last.ts : null
     };
+  },
+
+  fmtMinutes(min) {
+    min = Math.max(0, Math.round(min || 0));
+    const h = Math.floor(min / 60), m = min % 60;
+    return h ? (m ? h + 'h ' + m + 'm' : h + 'h') : m + 'm';
+  },
+
+  // "Days held" streak: consecutive cave-free days. Derived, not scheduled —
+  // anchor is the last cave (or install if never caved), so it needs no alarms
+  // and survives restarts. best is persisted in meta and topped up on read.
+  daysHeld(meta, now) {
+    const anchor = (meta && (meta.lastCaveTs || meta.installedAt)) || now;
+    const current = Math.max(0, Math.floor((now - anchor) / 86400000));
+    const best = Math.max(current, (meta && meta.bestDaysHeld) || 0);
+    return { current, best };
   },
 
   // Encouraging counterpart to relapseStats: how much time the blocks (probably)

@@ -60,6 +60,24 @@
   function renderIndividual(state) {
     el.managedBanner.hidden = true;
     el.addWrap.hidden = false;
+
+    // Lead with the win (P0.2): time saved + days held, click-through to history.
+    const winStrip = document.getElementById('winStrip');
+    if (winStrip) {
+      if (state.blocklist.length) {
+        const saved = HB.timeSavedStats(state.blockLog, Date.now());
+        const held = HB.daysHeld(state.meta, Date.now());
+        winStrip.textContent = '🛡 ' + HB.fmtMinutes(saved.weekMin) + ' saved this week · ' +
+          held.current + (held.current === 1 ? ' day held' : ' days held');
+      } else {
+        winStrip.textContent = '🛡 Block your first site to start saving time.';
+      }
+      winStrip.hidden = false;
+      if (!winStrip.dataset.wired) {
+        winStrip.dataset.wired = '1';
+        winStrip.addEventListener('click', () => chrome.runtime.openOptionsPage());
+      }
+    }
     const now = Date.now();
     const sorted = [...state.blocklist].sort((a, b) => a.domain.localeCompare(b.domain));
     el.count.textContent = String(sorted.length);
