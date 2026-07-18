@@ -69,10 +69,10 @@ await bgL.onInstalled({ reason: 'install' }); await tick();
 {
   const { win, doc } = makePage('welcome.html'); await tick();
   const rows = () => doc.querySelectorAll('#list .row').length;
-  ck('welcome lists the 5 seeded defaults', rows() === 5, 'rows=' + rows());
+  ck('welcome lists the 3 seeded defaults', rows() === 3, 'rows=' + rows());
   inputEv(win, doc.getElementById('site'), 'tiktok.com');
   clickEv(win, doc.getElementById('add')); await tick();
-  ck('welcome: adding tiktok.com updates the list to 6', rows() === 6, 'rows=' + rows());
+  ck('welcome: adding tiktok.com updates the list to 4', rows() === 4, 'rows=' + rows());
   ck('welcome: add gives feedback', /now blocked/.test(txt(doc, '#hint')), txt(doc, '#hint'));
   removedTab = null;
   clickEv(win, doc.getElementById('start')); await tick();
@@ -132,11 +132,11 @@ console.log('\n== P2: The Determined Cheater ==');
 {
   const nowd = Date.now();
   // no cooldown started -> cannot unblock
-  const r1 = await bg('grantAllowance', { domain: 'reddit.com', reason: 'a perfectly long reason here yes' });
+  const r1 = await bg('grantAllowance', { domain: 'youtube.com', reason: 'a perfectly long reason here yes' });
   ck('cannot unblock without waiting the cooldown', !r1.ok && r1.error === 'cooldown-not-done', JSON.stringify(r1));
-  await bg('startCooldown', { domain: 'reddit.com' });
-  store.cooldowns['reddit.com'].endsAt = Date.now() - 1; // pretend elapsed
-  const r2 = await bg('grantAllowance', { domain: 'reddit.com', reason: 'no' });
+  await bg('startCooldown', { domain: 'youtube.com' });
+  store.cooldowns['youtube.com'].endsAt = Date.now() - 1; // pretend elapsed
+  const r2 = await bg('grantAllowance', { domain: 'youtube.com', reason: 'no' });
   ck('cannot unblock with a too-short reason', !r2.ok && r2.error === 'reason-too-short', JSON.stringify(r2));
   // bypass page
   const { doc } = makePage('blocked.html', '?d=translate.google.com&x=1'); await tick();

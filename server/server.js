@@ -232,7 +232,8 @@ async function api(req, res, pathname) {
     const user = { id: newId('usr'), email, salt, hash, plan: 'free', proUntil: null, lifetime: false, createdAt: Date.now() };
     data.users.push(user);
     const token = newToken();
-    data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + TOKEN_TTL };
+    // remember=true issues a long-lived token (the linked browser extension needs one).
+    data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + (body.remember ? 180 * 24 * 3600e3 : TOKEN_TTL) };
     db.save();
     return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user), entitlement: entitlement.entitlementFor(user) });
   }
@@ -244,7 +245,8 @@ async function api(req, res, pathname) {
     const user = data.users.find(u => u.email === email);
     if (!user || !verifyPassword(String(body.password || ''), user.salt, user.hash)) return send(res, 401, { ok: false, error: 'Wrong email or password' });
     const token = newToken();
-    data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + TOKEN_TTL };
+    // remember=true issues a long-lived token (the linked browser extension needs one).
+    data.tokens[token] = { kind: 'user', id: user.id, expiresAt: Date.now() + (body.remember ? 180 * 24 * 3600e3 : TOKEN_TTL) };
     db.save();
     return send(res, 200, { ok: true, token, user: { email }, status: billing.consumerStatus(user), entitlement: entitlement.entitlementFor(user) });
   }

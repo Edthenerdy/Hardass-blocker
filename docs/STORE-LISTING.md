@@ -37,8 +37,11 @@ FEATURES
 - Your relapse log, kept honest and kept private.
 - Per-device: your blocklist and history live on this device and nothing syncs anywhere.
 
+FREE AND PRO
+The core is free: block up to 5 sites with the full Cooldown, streak, and time-saved stats. Holdfast Pro ($7.99/mo) unlocks unlimited sites and your full history.
+
 PRIVACY
-Holdfast stores everything locally on your device. It collects no personal data, sends nothing to us, and has no ads, analytics, or trackers. See the privacy policy linked below.
+Holdfast stores everything locally on your device — no ads, analytics, or trackers, and your browsing is never read or uploaded. The only exception is optional: if you sign in for Holdfast Pro, your email and subscription status are used to activate it (payments are handled by Stripe). See the privacy policy linked below.
 
 Holdfast won't argue with you. Past-you set the rule. Holdfast holds the line.
 ```
@@ -71,7 +74,7 @@ Holdfast blocks websites the user chooses and enforces a deliberate cooldown —
 ## Privacy practices tab (what to declare)
 
 - **Single purpose** — as above.
-- **Data collected:** select **none**. Holdfast does not collect or transmit user data in individual use.
+- **Data collected:** if shipping with Pro sign-in enabled, declare **Authentication information** (email/password, used only to sign in) and **User activity: none / Website content: none**. If shipping the free-only build (Pro UI disabled), declare **none**. Everything else stays local either way.
 - **Data usage certifications** — tick all three:
   - I do not sell or transfer user data to third parties (outside approved use cases).
   - I do not use or transfer user data for purposes unrelated to the item's single purpose.

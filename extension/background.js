@@ -77,6 +77,11 @@ async function addBlock(rawDomain) {
   const domain = HB.normalizeDomain(rawDomain);
   if (!domain) return { ok: false, error: 'empty' };
   if (state.blocklist.some(b => b.domain === domain)) return { ok: true, domain };
+  // Freemium wall: free tier blocks up to FREE_MAX_SITES. Managed devices are
+  // policy-driven (no cap); Pro removes it. The Cooldown itself is never gated.
+  if (!HB.isManaged(state) && !HB.isPro(state) && state.blocklist.length >= HB.FREE_MAX_SITES) {
+    return { ok: false, error: 'free-limit', limit: HB.FREE_MAX_SITES };
+  }
   state.blocklist.push({ domain, ruleId: nextRuleId(state), addedAt: Date.now() });
   await HB.set({ blocklist: state.blocklist });
   await applyRules();
@@ -231,6 +236,64 @@ async function telemetry(domain, event) {
   catch (e) { /* offline: ignore */ }
 }
 
+/* ---------------- Holdfast Pro (consumer entitlement) ---------------- */
+
+// Link the extension to a Holdfast account: try login first, create the account
+// if it doesn't exist. Long-lived token (remember:true); re-checked periodically.
+async function proLink(serverUrl, email, password) {
+  serverUrl = String(serverUrl || '').trim().replace(/\/+$/, '');
+  if (!serverUrl || !email || !password) return { ok: false, error: 'Server, email and password are required' };
+  const post = async (path) => {
+    const res = await fetch(serverUrl + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, remember: true }) });
+    return res.json();
+  };
+  let j;
+  try {
+    j = await post('/api/auth/user/login');
+    if (!j.ok) {
+      const s = await post('/api/auth/user/signup');
+      if (s.ok) j = s; // brand-new account
+      else return { ok: false, error: j.error || s.error || 'Sign-in failed' };
+    }
+  } catch (e) { return { ok: false, error: 'Cannot reach the server' }; }
+  const active = !!(j.status && j.status.plan === 'pro');
+  const pro = { serverUrl, email, token: j.token, active, plan: (j.status && j.status.plan) || 'free', checkedAt: Date.now() };
+  await HB.set({ pro });
+  return { ok: true, pro };
+}
+
+async function proSync() {
+  const state = await HB.get();
+  if (!state.pro || !state.pro.token) return { ok: false, error: 'not-linked' };
+  let j;
+  try {
+    const res = await fetch(state.pro.serverUrl + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + state.pro.token } });
+    j = await res.json();
+  } catch (e) { return { ok: false, error: 'offline', pro: state.pro }; }
+  if (!j.ok) {
+    // Token expired/revoked: keep the link but mark inactive (grace still applies).
+    state.pro.active = false; state.pro.checkedAt = Date.now();
+    await HB.set({ pro: state.pro });
+    return { ok: false, error: 'unauthorized', pro: state.pro };
+  }
+  state.pro.active = j.plan === 'pro';
+  state.pro.plan = j.plan || 'free';
+  state.pro.checkedAt = Date.now();
+  await HB.set({ pro: state.pro });
+  return { ok: true, pro: state.pro };
+}
+
+async function proUnlink() {
+  await HB.set({ pro: null });
+  return { ok: true };
+}
+
+// Refresh entitlement when it's getting stale (piggybacks on the watchdog alarm).
+async function proMaybeRefresh() {
+  const state = await HB.get();
+  if (state.pro && state.pro.token && Date.now() - (state.pro.checkedAt || 0) > 6 * 3600e3) await proSync();
+}
+
 /* ---------------- lifecycle ---------------- */
 
 async function ensureAlarms() {
@@ -240,7 +303,7 @@ async function ensureAlarms() {
 }
 
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === WATCHDOG_ALARM) verifyAndHeal();
+  if (alarm.name === WATCHDOG_ALARM) { verifyAndHeal(); proMaybeRefresh(); }
   else if (alarm.name === SYNC_ALARM) syncManaged();
   else if (alarm.name.startsWith(REBLOCK_PREFIX)) reblock(alarm.name.slice(REBLOCK_PREFIX.length));
 });
@@ -250,7 +313,9 @@ chrome.runtime.onInstalled.addListener(async details => {
   // Anchor the "days held" streak. Set once, for any install kind.
   if (!state.meta.installedAt) { state.meta.installedAt = Date.now(); await HB.set({ meta: state.meta }); }
   if (details.reason === 'install' && !HB.isManaged(state)) {
-    for (const d of ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com']) await addBlock(d);
+    // Seed 3 (not 5): the free tier caps at FREE_MAX_SITES, and a full quota on
+    // install would hit the paywall before the product's aha moment.
+    for (const d of ['instagram.com', 'youtube.com', 'x.com']) await addBlock(d);
     // First-run: open the welcome page so the user understands the Cooldown
     // and can adjust the starter blocklist. Individual installs only.
     try { chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') }); } catch (e) { /* no tabs access */ }
@@ -282,6 +347,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case 'pollRequests': return sendResponse(await pollRequests());
         case 'selfGrantManaged': return sendResponse(await selfGrantManaged(msg.domain, msg.reason));
         case 'telemetry': await telemetry(msg.domain, msg.event); return sendResponse({ ok: true });
+        case 'proLink': return sendResponse(await proLink(msg.serverUrl, msg.email, msg.password));
+        case 'proSync': return sendResponse(await proSync());
+        case 'proUnlink': return sendResponse(await proUnlink());
         case 'applyRules': await applyRules(); return sendResponse({ ok: true });
         default: return sendResponse({ ok: false, error: 'unknown' });
       }

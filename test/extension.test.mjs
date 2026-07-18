@@ -56,8 +56,8 @@ const ck = (n, c, d) => { if (c) { pass++; console.log('  ok  ', n); } else { fa
 
 await L.onInstalled({ reason: 'install' });
 await new Promise(r => setTimeout(r, 50));
-const defaults = ['instagram.com', 'facebook.com', 'reddit.com', 'x.com', 'youtube.com'];
-ck('install seeds 5 default blocks', defaults.every(d => (store.blocklist || []).some(b => b.domain === d)));
+const defaults = ['instagram.com', 'youtube.com', 'x.com'];
+ck('install seeds 3 default blocks (leaves free-tier headroom)', defaults.every(d => (store.blocklist || []).some(b => b.domain === d)) && store.blocklist.length === 3);
 ck('install applies a block rule per default', defaults.every(d => blockRuleFor(d)));
 ck('bypass rules present', dnr.filter(r => (r.action.redirect.extensionPath || '').includes('x=1')).length === HB.BYPASS_DOMAINS.length);
 
@@ -131,6 +131,22 @@ ck('reblock sets the one-time reassure flag', store.meta.pendingReassure === 'p0
 // ===== helpers =====
 ck('fmtMinutes: 210 -> "3h 30m"', HB.fmtMinutes(210) === '3h 30m', HB.fmtMinutes(210));
 ck('fmtMinutes: 45 -> "45m"', HB.fmtMinutes(45) === '45m', HB.fmtMinutes(45));
+
+// ===== P1 freemium: the free wall =====
+// fill up to the cap (3 seeds + p0test = 4 at this point)
+while (store.blocklist.length < HB.FREE_MAX_SITES) await msg('addBlock', { domain: 'filler' + store.blocklist.length + '.com' });
+ck('precondition: at the free cap', store.blocklist.length === HB.FREE_MAX_SITES, 'len=' + store.blocklist.length);
+let r6 = await msg('addBlock', { domain: 'sixth-site.com' });
+ck('6th site on free tier -> free-limit', !r6.ok && r6.error === 'free-limit', JSON.stringify(r6));
+store.pro = { serverUrl: 'https://x', email: 'e@x.com', token: 't', active: true, plan: 'pro', checkedAt: Date.now() };
+r6 = await msg('addBlock', { domain: 'sixth-site.com' });
+ck('Pro removes the cap', r6.ok === true, JSON.stringify(r6));
+store.pro.checkedAt = Date.now() - 72 * 3600e3; // stale beyond the 48h grace
+r6 = await msg('addBlock', { domain: 'seventh-site.com' });
+ck('stale entitlement (>48h) falls back to free', !r6.ok && r6.error === 'free-limit', JSON.stringify(r6));
+ck('isPro: active within grace', HB.isPro({ pro: { active: true, checkedAt: Date.now() } }) === true);
+ck('isPro: inactive plan is not Pro', HB.isPro({ pro: { active: false, checkedAt: Date.now() } }) === false);
+store.pro = null;
 
 console.log('\n==== ' + pass + ' passed, ' + fail + ' failed ====');
 process.exit(fail ? 1 : 0);

@@ -181,6 +181,46 @@ reset();
   ck('welcome Start closes the tab', win.__removed === 7, 'removed=' + win.__removed);
 }
 
+console.log('\n== P1 FREEMIUM: contextual upgrade prompts ==');
+reset();
+{
+  store.blocklist = ['a.com', 'b.com', 'c.com', 'd.com', 'e.com'].map((d, i) => ({ domain: d, ruleId: i + 1 }));
+  const { win, doc } = makePage('popup.html'); await tick();
+  const card = doc.getElementById('upgradeCard');
+  ck('upgrade card hidden until the wall is hit', card.hidden, 'visible early');
+  type(win, doc.getElementById('siteInput'), 'sixth.com');
+  click(win, doc.getElementById('addBtn')); await tick();
+  ck('6th site triggers the contextual upgrade card', !card.hidden && /\$7\.99/.test(card.textContent), card.textContent.slice(0, 60));
+  ck('the 6th site was NOT added (free wall holds)', !store.blocklist.some(b => b.domain === 'sixth.com'), 'added');
+  click(win, doc.getElementById('upgradeDismiss')); await tick();
+  ck('upgrade card is dismissible', card.hidden, 'still visible');
+  click(win, doc.getElementById('upgradeGo')); await tick();
+  ck('Get Pro opens the upgrade URL with attribution', /src=sixth-site/.test(win.__created || ''), 'created=' + win.__created);
+}
+reset();
+{
+  // Pro user: no wall
+  store.blocklist = ['a.com', 'b.com', 'c.com', 'd.com', 'e.com'].map((d, i) => ({ domain: d, ruleId: i + 1 }));
+  store.pro = { serverUrl: 'https://x', email: 'e@x', token: 't', active: true, plan: 'pro', checkedAt: Date.now() };
+  const { win, doc } = makePage('popup.html'); await tick();
+  type(win, doc.getElementById('siteInput'), 'sixth.com');
+  click(win, doc.getElementById('addBtn')); await tick();
+  ck('Pro user adds a 6th site with no card', store.blocklist.some(b => b.domain === 'sixth.com') && doc.getElementById('upgradeCard').hidden, 'blocked or card shown');
+}
+reset();
+{
+  // options: Pro card + free 7-day history window (trigger B)
+  store.relapseLog = [
+    { domain: 'a.com', ts: Date.now() - 2 * 86400000, reason: 'recent', grantedMin: 10 },
+    { domain: 'b.com', ts: Date.now() - 20 * 86400000, reason: 'ancient', grantedMin: 10 },
+  ];
+  const { win, doc } = makePage('options.html'); await tick();
+  ck('options Pro card shows the $7.99 pitch', /\$7\.99/.test(txt(doc, '#proStatus')), txt(doc, '#proStatus'));
+  ck('free history hides entries older than 7 days', !/ancient/.test(doc.getElementById('logBody').textContent), 'ancient visible');
+  const note = doc.getElementById('histUpgrade');
+  ck('older history surfaces the contextual Pro note', note && !note.hidden && /Pro thing/.test(note.textContent), note && note.textContent);
+}
+
 console.log('\n==== ' + pass + ' passed, ' + fail + ' failed ====');
 if (findings.length) { console.log('FAILURES:'); findings.forEach(f => console.log(' - ' + f)); }
 process.exit(fail ? 1 : 0);

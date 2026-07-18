@@ -12,15 +12,36 @@ const HB = {
     relapseLog: [],
     blockLog: [],
     meta: { installedAt: null, lastCaveTs: null, bestDaysHeld: 0 },
+    pro: null,
     team: null,
     policy: null
   },
+
+  // Freemium: the free tier blocks up to this many sites. The Cooldown itself is
+  // never gated — the aha moment stays free.
+  FREE_MAX_SITES: 5,
+  FREE_HISTORY_DAYS: 7,
+  // Where "Upgrade" goes before the account server is configured (landing page).
+  UPGRADE_FALLBACK: 'https://edthenerdy.github.io/Hardass-blocker/',
 
   // Rough minutes "saved" per blocked visit — powers the encouraging time-saved stat.
   MIN_PER_BLOCK: 15,
 
   isManaged(state) {
     return !!(state && state.team && state.team.deviceToken);
+  },
+
+  // Pro entitlement, with a 48h offline grace window so Pro doesn't flicker off
+  // when the entitlement server is briefly unreachable.
+  isPro(state, now) {
+    now = now || Date.now();
+    const p = state && state.pro;
+    return !!(p && p.active && p.checkedAt && (now - p.checkedAt) < 48 * 3600e3);
+  },
+
+  upgradeUrl(state, src) {
+    const base = (state && state.pro && state.pro.serverUrl) ? state.pro.serverUrl.replace(/\/+$/, '') + '/account' : HB.UPGRADE_FALLBACK;
+    return base + (base.includes('?') ? '&' : '?') + 'src=' + encodeURIComponent(src || 'extension');
   },
 
   // Common ways people reach a blocked site without visiting it directly:

@@ -126,6 +126,22 @@ button {
 .list .remove.confirm { color: var(--redline); border-color: var(--redline); }
 .list .status.managed { color: var(--redline); }
 
+/* Contextual upgrade card — shown only when the user hits the free wall. */
+.upgradeCard {
+  background: var(--slate);
+  border: 0.5px solid var(--amber);
+  border-radius: 8px;
+  padding: 11px 12px;
+  font-size: 12px;
+  margin: 2px 0 10px;
+  line-height: 1.45;
+}
+.upgradeCard strong { color: var(--amber); }
+.upgradeCard p { margin: 4px 0 8px; color: var(--ash); }
+.upgradeRow { display: flex; gap: 8px; }
+#upgradeGo { background: var(--amber); color: var(--ink); font-weight: 700; padding: 7px 14px; }
+.upgradeCard .dismiss { background: transparent; color: var(--ash); border: 0.5px solid var(--steel); padding: 7px 12px; }
+
 /* The daily win, up top: time saved + days held. Click-through to history. */
 .winStrip {
   display: block;

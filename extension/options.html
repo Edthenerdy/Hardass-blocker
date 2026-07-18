@@ -45,6 +45,33 @@
     </section>
 
     <section class="card">
+      <h2>Holdfast Pro</h2>
+      <p id="proStatus" class="note">Free plan — up to 5 blocked sites and 7 days of history. Pro is $7.99/mo: unlimited sites, schedules, full history.</p>
+      <div id="proUnlinked">
+        <div class="field">
+          <label for="proServer">Account server</label>
+          <input id="proServer" type="text" placeholder="https://app.holdfast.example" />
+        </div>
+        <div class="field">
+          <label for="proEmail">Email</label>
+          <input id="proEmail" type="email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="proPassword">Password</label>
+          <input id="proPassword" type="password" placeholder="6+ characters" />
+        </div>
+        <button id="proLinkBtn" class="primary">Sign in / create account</button>
+        <span id="proMsg" class="saveMsg"></span>
+      </div>
+      <div id="proLinked" hidden>
+        <button id="proSyncBtn" class="ghost">Refresh status</button>
+        <button id="proManageBtn" class="ghost">Manage subscription</button>
+        <button id="proUnlinkBtn" class="ghost">Unlink</button>
+        <span id="proMsg2" class="saveMsg"></span>
+      </div>
+    </section>
+
+    <section class="card">
       <h2>Your history</h2>
       <p class="note">Every time you talked yourself into unblocking something. No editing — that's the point.</p>
       <div id="logWrap">

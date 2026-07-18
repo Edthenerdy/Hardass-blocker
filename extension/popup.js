@@ -132,11 +132,20 @@
     });
   }
 
+  // Contextual upgrade (trigger A): shown only at the moment the free wall is hit.
+  const upgradeCard = document.getElementById('upgradeCard');
+  document.getElementById('upgradeGo').addEventListener('click', async () => {
+    const state = await HB.get();
+    try { chrome.tabs.create({ url: HB.upgradeUrl(state, 'sixth-site') }); } catch (e) { /* noop */ }
+  });
+  document.getElementById('upgradeDismiss').addEventListener('click', () => { upgradeCard.hidden = true; });
+
   async function add() {
     const domain = HB.normalizeDomain(el.input.value);
     if (!domain) { el.addHint.textContent = 'Type a site like instagram.com'; return; }
     const res = await chrome.runtime.sendMessage({ type: 'addBlock', domain });
-    if (res && res.ok) { el.input.value = ''; el.addHint.textContent = domain + ' is now blocked.'; render(); }
+    if (res && res.ok) { el.input.value = ''; el.addHint.textContent = domain + ' is now blocked.'; upgradeCard.hidden = true; render(); }
+    else if (res && res.error === 'free-limit') { el.addHint.textContent = ''; upgradeCard.hidden = false; }
     else el.addHint.textContent = res && res.error === 'managed' ? 'Managed by your organization.' : 'Could not block that.';
   }
 

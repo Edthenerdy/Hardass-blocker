@@ -88,10 +88,33 @@
     el.reasonChars.value = state.settings.minReasonChars;
     el.bypass.checked = state.settings.blockBypass !== false;
 
-    const log = [...state.relapseLog].sort((a, b) => b.ts - a.ts);
+    // Free tier sees the last FREE_HISTORY_DAYS of history; Pro sees everything.
+    const pro = HB.isPro(state);
+    const all = [...state.relapseLog].sort((a, b) => b.ts - a.ts);
+    const cutoff = Date.now() - HB.FREE_HISTORY_DAYS * 86400000;
+    const log = pro ? all : all.filter(r => r.ts >= cutoff);
+    const hiddenCount = all.length - log.length;
     el.logBody.innerHTML = '';
     el.logTable.hidden = log.length === 0;
     el.logEmpty.hidden = log.length > 0;
+
+    // Contextual upgrade (trigger B): only when older history actually exists.
+    let histNote = document.getElementById('histUpgrade');
+    if (!histNote) {
+      histNote = document.createElement('p');
+      histNote.id = 'histUpgrade'; histNote.className = 'note';
+      el.logEmpty.parentNode.appendChild(histNote);
+    }
+    if (!pro && hiddenCount > 0) {
+      histNote.innerHTML = hiddenCount + ' older ' + (hiddenCount === 1 ? 'entry is' : 'entries are') +
+        ' beyond the free 7-day window. <a id="histUpgradeLink" href="#" style="color:var(--amber)">Your full history is a Pro thing — $7.99/mo.</a>';
+      histNote.hidden = false;
+      document.getElementById('histUpgradeLink').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const s = await HB.get();
+        try { chrome.tabs.create({ url: HB.upgradeUrl(s, 'history') }); } catch (err) { /* noop */ }
+      });
+    } else histNote.hidden = true;
 
     for (const r of log) {
       const tr = document.createElement('tr');
@@ -134,6 +157,60 @@
     load();
   });
 
+  /* ---------- Holdfast Pro ---------- */
+  const proEl = {
+    status: document.getElementById('proStatus'),
+    unlinked: document.getElementById('proUnlinked'),
+    linked: document.getElementById('proLinked'),
+    server: document.getElementById('proServer'),
+    email: document.getElementById('proEmail'),
+    password: document.getElementById('proPassword'),
+    linkBtn: document.getElementById('proLinkBtn'),
+    msg: document.getElementById('proMsg'),
+    syncBtn: document.getElementById('proSyncBtn'),
+    manageBtn: document.getElementById('proManageBtn'),
+    unlinkBtn: document.getElementById('proUnlinkBtn'),
+    msg2: document.getElementById('proMsg2')
+  };
+
+  async function loadPro() {
+    const state = await HB.get();
+    const linked = !!(state.pro && state.pro.token);
+    proEl.unlinked.hidden = linked;
+    proEl.linked.hidden = !linked;
+    if (linked) {
+      proEl.status.textContent = HB.isPro(state)
+        ? 'Pro active — linked as ' + state.pro.email + '. Unlimited sites, full history.'
+        : 'Linked as ' + state.pro.email + ' — free plan. Upgrade for unlimited sites, schedules and full history ($7.99/mo).';
+    } else {
+      proEl.status.textContent = 'Free plan — up to ' + HB.FREE_MAX_SITES + ' blocked sites and ' + HB.FREE_HISTORY_DAYS + ' days of history. Pro is $7.99/mo: unlimited sites, schedules, full history.';
+    }
+  }
+
+  proEl.linkBtn.addEventListener('click', async () => {
+    proEl.msg.textContent = 'Linking…';
+    const res = await chrome.runtime.sendMessage({ type: 'proLink', serverUrl: proEl.server.value.trim(), email: proEl.email.value.trim(), password: proEl.password.value });
+    proEl.msg.textContent = res && res.ok ? 'Linked.' : ((res && res.error) || 'Failed');
+    proEl.password.value = '';
+    if (res && res.ok) { loadPro(); load(); }
+  });
+  proEl.syncBtn.addEventListener('click', async () => {
+    proEl.msg2.textContent = 'Checking…';
+    const res = await chrome.runtime.sendMessage({ type: 'proSync' });
+    proEl.msg2.textContent = res && res.ok ? 'Up to date.' : ((res && res.error) || 'Failed');
+    loadPro(); load();
+    setTimeout(() => { proEl.msg2.textContent = ''; }, 1800);
+  });
+  proEl.manageBtn.addEventListener('click', async () => {
+    const state = await HB.get();
+    try { chrome.tabs.create({ url: HB.upgradeUrl(state, 'manage') }); } catch (e) { /* noop */ }
+  });
+  proEl.unlinkBtn.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ type: 'proUnlink' });
+    loadPro(); load();
+  });
+
   load();
   loadTeam();
+  loadPro();
 })();
