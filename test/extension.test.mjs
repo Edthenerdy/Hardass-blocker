@@ -146,6 +146,11 @@ r6 = await msg('addBlock', { domain: 'seventh-site.com' });
 ck('stale entitlement (>48h) falls back to free', !r6.ok && r6.error === 'free-limit', JSON.stringify(r6));
 ck('isPro: active within grace', HB.isPro({ pro: { active: true, checkedAt: Date.now() } }) === true);
 ck('isPro: inactive plan is not Pro', HB.isPro({ pro: { active: false, checkedAt: Date.now() } }) === false);
+// proLive gates the paid CTAs: false until an account server is configured.
+ck('proLive: false when no PRO_SERVER (pre-launch)', HB.proLive() === false);
+HB.PRO_SERVER = 'https://app.example';
+ck('proLive: true once PRO_SERVER is set', HB.proLive() === true);
+HB.PRO_SERVER = '';
 store.pro = null;
 
 console.log('\n==== ' + pass + ' passed, ' + fail + ' failed ====');

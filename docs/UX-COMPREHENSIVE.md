@@ -124,3 +124,95 @@ re-render I looked at.
 - Live Pro purchase path is gated until the account server is deployed and a
   Stripe key is set (Edward's launch step). The extension already speaks to it
   (`proLink`/`proSync`); the UI honestly reflects "not open yet" until then.
+
+---
+
+## Round 4 — four more fresh personas + the enterprise surfaces
+
+Round 3 shipped, but the review had only walked the *consumer* extension. Round 4
+(a) rendered the surfaces no persona had seen — the **admin console** (rendered
+live against the running backend, so it doubles as an end-to-end Teams check),
+plus the **privacy page** and **mobile landing**; and (b) ran four *new* blind
+personas chosen to stress angles the first three missed:
+
+- **Relapser Rae** — emotional safety / shame triggers (the returning user who
+  just caved).
+- **Admin Amir** — non-technical practice manager evaluating Holdfast for Teams.
+- **ESL Elena** — non-native English speaker; idioms that hide the action.
+- **Cancel Cal** — churn/cancel/refund skeptic hunting dark patterns.
+
+The signal to trust was **convergence**: where independent personas flagged the
+same thing, it got fixed.
+
+### Fixed (verified by suite + re-render)
+
+- **Honest purchase path (Cal, BLOCKER ×2).** The paywall's "Get Pro" and the
+  linked-free "Upgrade" button presented a *live* purchase while the app admits
+  elsewhere that sign-ups aren't open. Added one source of truth —
+  `HB.proLive()` (true only once an account server is configured). Until then the
+  popup card reads "Unlimited sites… are coming in Holdfast Pro ($7.99/mo). The
+  core stays free — no rush." with a **"See the plan"** button (not a dead
+  purchase), the options upgrade button is hidden with an honest status line, and
+  the landing pricing card says **"Coming soon."** When Edward sets `PRO_SERVER`,
+  every CTA flips to live automatically.
+- **"cave/caved" removed from functional copy (Rae + Elena, BLOCKER).** Rae read
+  the data label "Last time you caved" as the tool sneering in a spreadsheet cell;
+  Elena (ESL) couldn't parse the word at all — and it sat in *settings help* and
+  the *welcome* flow, the worst places for an idiom. Now: block-page stat →
+  **"Last unblock"**; settings help → **"…before you can unblock a site"**;
+  welcome/landing → **"given in"**. Brand voice stays in headlines; data labels
+  and config help are literal.
+- **Ambiguous escape button (Elena, BLOCKER; Rae).** "Nope — take me back" read to
+  a non-native speaker as "take me *to* the site." Relabeled to the unambiguous
+  **"Leave this site"**, which also gives the escape the weight Rae wanted.
+- **"Pass over" misread as "Passover" (Elena, BLOCKER).** The post-cave banner now
+  opens **"Your pass ended. No drama…"** — same compassion Rae praised, no parse
+  trap.
+- **Shame-tone captions softened (Rae + Amir).** History caption "Every time you
+  talked yourself into unblocking something" → **"The reasons you gave, in your
+  own words — an honest mirror, not a scoreboard."** "No relapses logged yet" →
+  **"No unblocks logged yet."** Cooldown sub-line "Past-you was serious" (scold) →
+  **"The wait is the point — you set this yourself."**
+- **Cancel vs Unlink clarity (Cal).** Options now states: cancel under **Manage
+  subscription** (Stripe); **Unlink** only signs the device out — it does *not*
+  cancel billing. So no one keeps paying after unlinking.
+- **Downgrade honesty (Cal).** The free-window history note now says older entries
+  are **hidden, not deleted — they return if you upgrade.**
+- **Monthly renewal showed a year out (Amir).** Seed + migration set
+  `currentPeriodEnd` to +365 days for a *monthly* plan, so the console read
+  "Renews 18/07/2027." Fixed to +30 days (the real subscribe path was already
+  correct); console now shows **18/08/2026**.
+- **Reports looked invented / opaque per-seat price (Amir + Cal).** Console reports
+  now state the basis (**"~15 min per blocked attempt across enrolled devices"**);
+  billing shows the multiplier (**"$56 · $4/seat"**).
+
+### Flagged for Edward — brand & product calls, not unilaterally changed
+
+- **The angry mascot + "can't talk your way out of" tagline** (Rae, Amir). On a bad
+  day the permanently-scowling face reads as the tool taking a side *against* the
+  user; in a workplace it reads as treating staff like addicts. This is a
+  deliberate brand identity — Edward's call, not mine to rewrite. Options if he
+  wants: a calmer/resolute mascot, and/or a neutral **workplace copy mode** in
+  managed installs (swap "relapses/cave" and the scowl for plain "not available on
+  work devices").
+- **Teams needs its own story** (Amir): the public site barely mentions Teams — no
+  per-seat price, no deployment walkthrough, no admin tour. And "no MDM, no IT"
+  still leaves an admin emailing 14 people a raw code; an **enrolment invite link**
+  (install + prefilled code) would close that gap.
+- **Managed privacy for staff** (Amir): "Your admin reads this" + per-device reason
+  logs is an HR landmine without a short staff-facing privacy summary and/or
+  approver notifications/auto-expiry.
+- **Data export (CSV)** (Cal): local-first deletion is honest, but there's no
+  "download my history."
+
+### Verification (final, all green)
+- Unit (mock-chrome vm): **42/42** (+`proLive` gate)
+- User journeys (jsdom): **24/24**
+- Interactions (every button/input): **55/55** (+ honest-CTA + billing-not-live)
+- Link/asset audit: clean
+- Visual: full matrix + admin console (live backend), privacy, mobile landing
+  re-rendered and reviewed; every fixed state confirmed by eye.
+
+**Total: 121 automated checks + ~28 visual states across 7 personas over two
+rounds. No open trust or comprehension issues; remaining items are explicit
+brand/product decisions for Edward.**

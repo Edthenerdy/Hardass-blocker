@@ -252,7 +252,8 @@
     const r = await api('/reports');
     if (!r.ok) return;
     const headline = r.totalBlocked
-      ? '<div class="row"><span><strong>Time reclaimed this week (est.)</strong></span><span style="color:var(--clear);font-weight:600">' + fmtMinutes(r.timeSavedMin) + '</span></div>'
+      ? '<div class="row"><span><strong>Time reclaimed this week (est.)</strong></span><span style="color:var(--clear);font-weight:600">' + fmtMinutes(r.timeSavedMin) + '</span></div>' +
+        '<div class="row"><span class="muted" style="font-size:12px">Estimated at ~15 min per blocked attempt across enrolled devices.</span><span></span></div>'
       : '';
     el.reportList.innerHTML = r.top.length
       ? headline + r.top.map(x => '<div class="row"><span>' + esc(x.domain) + '</span><span class="muted">' + x.count + ' blocked</span></div>').join('')
@@ -271,7 +272,7 @@
         '<div class="billMetric">' +
         '<div class="m"><div class="k">Status</div><div class="v"><span class="pill active">active</span></div></div>' +
         '<div class="m"><div class="k">Seats</div><div class="v">' + s.seats + '</div></div>' +
-        '<div class="m"><div class="k">Monthly</div><div class="v">$' + (s.seats * price) + '</div></div>' +
+        '<div class="m"><div class="k">Monthly</div><div class="v">$' + (s.seats * price) + '<span style="font-size:12px;color:var(--ash);font-weight:400"> · $' + price + '/seat</span></div></div>' +
         '<div class="m"><div class="k">Renews</div><div class="v" style="font-size:14px">' + renew + '</div></div>' +
         '</div>' +
         '<div class="rowFields" style="align-items:flex-end"><div class="field"><label>Change seats</label>' +

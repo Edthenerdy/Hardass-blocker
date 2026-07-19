@@ -34,7 +34,7 @@
       <div class="field">
         <label for="reasonChars">Minimum reason length</label>
         <div class="inline"><input id="reasonChars" type="number" min="0" max="200" /> <span>characters</span></div>
-        <p class="note">You must write at least this much before you can cave.</p>
+        <p class="note">You must write at least this many characters before you can unblock a site.</p>
       </div>
       <div class="field">
         <label><input id="reasonBypass" type="checkbox" style="width:auto;margin-right:8px;vertical-align:middle" />Block bypass tricks (proxies, translators, cache, archive)</label>
@@ -74,18 +74,19 @@
         <button id="proSyncBtn" class="ghost">Refresh status</button>
         <button id="proUnlinkBtn" class="ghost">Unlink</button>
         <span id="proMsg2" class="saveMsg"></span>
+        <p class="note" id="proUnlinkNote">Cancel your subscription under <strong>Manage subscription</strong> (Stripe). <strong>Unlink</strong> only signs this device out — it does not cancel billing.</p>
       </div>
     </section>
 
     <section class="card">
       <h2>Your history</h2>
-      <p class="note">Every time you talked yourself into unblocking something. You can't tidy individual entries away — it's all here or you wipe the lot. Your call; it's your device.</p>
+      <p class="note">The reasons you gave, in your own words — an honest mirror, not a scoreboard. You can't tidy individual entries away; it's all here or you wipe the lot. Your call — it's your device.</p>
       <div id="logWrap">
         <table id="logTable" class="log" hidden>
           <thead><tr><th>When</th><th>Site</th><th>Reason you gave</th></tr></thead>
           <tbody id="logBody"></tbody>
         </table>
-        <p id="logEmpty" class="empty">No relapses logged yet. Keep it that way.</p>
+        <p id="logEmpty" class="empty">No unblocks logged yet. Keep it that way.</p>
       </div>
       <button id="clearLogBtn" class="ghost">Clear history</button>
     </section>

@@ -3,7 +3,9 @@ const { hashPassword } = require('./auth');
 
 module.exports = function seed() {
   const { salt, hash } = hashPassword('holdfast');
-  const YEAR = 365 * 24 * 3600 * 1000;
+  // team_monthly renews monthly — the period end must be ~1 month out, not a year,
+  // or the console shows a monthly plan "renewing" 12 months away.
+  const MONTH = 30 * 24 * 3600 * 1000;
   return {
     orgs: [
       {
@@ -12,7 +14,7 @@ module.exports = function seed() {
         seats: 14,
         plan: 'team_monthly',
         subscriptionStatus: 'active',
-        currentPeriodEnd: Date.now() + YEAR,
+        currentPeriodEnd: Date.now() + MONTH,
         groups: [
           {
             id: 'g_front',

@@ -48,6 +48,11 @@ const HB = {
     return base + (base.includes('?') ? '&' : '?') + 'src=' + encodeURIComponent(src || 'extension');
   },
 
+  // Can someone actually subscribe right now? Only once the account/billing
+  // server is configured. Until then every upgrade CTA must say "coming soon"
+  // rather than present a dead purchase button (honesty > funnel).
+  proLive() { return !!HB.PRO_SERVER; },
+
   // Common ways people reach a blocked site without visiting it directly:
   // translation proxies, cached copies, archive mirrors, and public web proxies.
   // These are always blocked alongside the real blocklist so the block holds.

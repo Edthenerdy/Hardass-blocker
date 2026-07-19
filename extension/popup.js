@@ -132,8 +132,22 @@
     });
   }
 
-  // Contextual upgrade (trigger A): shown only at the moment the free wall is hit.
+  // Contextual upgrade (trigger A): shown only at the moment the free limit is hit.
   const upgradeCard = document.getElementById('upgradeCard');
+  // Before billing is live, don't dangle a dead "Get Pro" purchase button —
+  // present it honestly as what's coming, routing to the plan on the site.
+  function paintUpgradeCard() {
+    const live = HB.proLive();
+    const body = document.getElementById('upgradeBody');
+    const go = document.getElementById('upgradeGo');
+    if (live) {
+      body.textContent = 'Pro takes it to unlimited, plus your full history. $7.99/mo.';
+      go.textContent = 'Get Pro';
+    } else {
+      body.textContent = 'Unlimited sites and full history are coming in Holdfast Pro ($7.99/mo). The core stays free — no rush.';
+      go.textContent = 'See the plan';
+    }
+  }
   document.getElementById('upgradeGo').addEventListener('click', async () => {
     const state = await HB.get();
     try { chrome.tabs.create({ url: HB.upgradeUrl(state, 'sixth-site') }); } catch (e) { /* noop */ }
@@ -145,7 +159,7 @@
     if (!domain) { el.addHint.textContent = 'Type a site like instagram.com'; return; }
     const res = await chrome.runtime.sendMessage({ type: 'addBlock', domain });
     if (res && res.ok) { el.input.value = ''; el.addHint.textContent = domain + ' is now blocked.'; upgradeCard.hidden = true; render(); }
-    else if (res && res.error === 'free-limit') { el.addHint.textContent = ''; upgradeCard.hidden = false; }
+    else if (res && res.error === 'free-limit') { el.addHint.textContent = ''; paintUpgradeCard(); upgradeCard.hidden = false; }
     else el.addHint.textContent = res && res.error === 'managed' ? 'Managed by your organization.' : 'Could not block that.';
   }
 

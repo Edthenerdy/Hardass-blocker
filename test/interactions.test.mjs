@@ -194,6 +194,7 @@ reset();
   type(win, doc.getElementById('siteInput'), 'sixth.com');
   click(win, doc.getElementById('addBtn')); await tick();
   ck('6th site triggers the contextual upgrade card', !card.hidden && /\$7\.99/.test(card.textContent), card.textContent.slice(0, 60));
+  ck('pre-launch upgrade CTA is honest (not a dead "Get Pro")', doc.getElementById('upgradeGo').textContent === 'See the plan', doc.getElementById('upgradeGo').textContent);
   ck('the 6th site was NOT added (free wall holds)', !store.blocklist.some(b => b.domain === 'sixth.com'), 'added');
   click(win, doc.getElementById('upgradeDismiss')); await tick();
   ck('upgrade card is dismissible', card.hidden, 'still visible');
@@ -234,10 +235,11 @@ reset();
 }
 reset();
 {
-  // linked but free -> explicit Upgrade button, no ambiguous "Manage subscription"
+  // linked but free, billing NOT live -> no dead upgrade/manage buttons; status is honest
   store.pro = { serverUrl: 'https://x', email: 'e@x', token: 't', active: false, plan: 'free', checkedAt: Date.now() };
   const { doc } = makePage('options.html'); await tick();
-  ck('linked-free shows an explicit Upgrade button', !doc.getElementById('proUpgradeBtn').hidden, 'no upgrade btn');
+  ck('linked-free hides the upgrade button while billing is closed', doc.getElementById('proUpgradeBtn').hidden, 'dead upgrade btn shown');
+  ck('linked-free is told billing isn\'t open yet', /isn.?t open yet/i.test(txt(doc, '#proStatus')), txt(doc, '#proStatus'));
   ck('linked-free hides "Manage subscription" (nothing to manage yet)', doc.getElementById('proManageBtn').hidden, 'manage shown');
 }
 reset();

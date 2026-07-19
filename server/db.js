@@ -31,7 +31,7 @@ function migrate() {
     if (o.subscriptionStatus === undefined) {
       o.plan = 'team_monthly';
       o.subscriptionStatus = 'active';
-      o.currentPeriodEnd = Date.now() + 365 * 24 * 3600 * 1000;
+      o.currentPeriodEnd = Date.now() + 30 * 24 * 3600 * 1000; // monthly plan → ~1 month, not a year
     }
     db.orgs = [o];
     (db.admins || []).forEach(a => { if (!a.orgId) a.orgId = o.id; });

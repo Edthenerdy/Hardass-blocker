@@ -182,7 +182,7 @@
     rows.push(['Times unblocked this week', String(stats.thisWeek)]);
     rows.push(['Times unblocked, all time', String(stats.allTime)]);
     if (stats.avgGranted) rows.push(['Average pass you grant yourself', stats.avgGranted + ' min']);
-    if (stats.lastTs) rows.push(['Last time you caved', whenText(stats.lastTs)]);
+    if (stats.lastTs) rows.push(['Last unblock', whenText(stats.lastTs)]);
     el.stats.innerHTML = '';
     for (const [k, v, cls] of rows) {
       const row = document.createElement('div'); row.className = 'row';
@@ -211,7 +211,7 @@
       if (remaining <= 0) {
         el.timer.textContent = '00:00';
         el.timer.classList.add('done');
-        el.timerCap.textContent = 'Cooldown done. Still want in? Say why, then decide.';
+        el.timerCap.textContent = 'Cooldown done. Still want to open this site? Say why, then decide.';
         clearInterval(tick); tick = null;
       }
       if (onTick) onTick();
@@ -240,7 +240,7 @@
     el.reasonHint.hidden = false;
     el.reasonHint.textContent = 'At least ' + settings.minReasonChars + ' characters. Be honest — future-you is reading this.';
     el.unblockBtn.textContent = 'Unblock for ' + settings.allowanceMinutes + ' min';
-    el.timerCap.textContent = 'Cooldown before you can unblock. Past-you was serious.';
+    el.timerCap.textContent = 'Cooldown before you can unblock. The wait is the point — you set this yourself.';
     startTicking(updateUnblockState);
   }
 
@@ -257,7 +257,7 @@
     const reassureEl = document.getElementById('reassure');
     if (reassureEl && !isPreview && fresh.meta.pendingReassure === domain) {
       const saved = HB.timeSavedStats(fresh.blockLog, Date.now());
-      reassureEl.textContent = 'Pass over. No drama — the block is back on.' +
+      reassureEl.textContent = 'Your pass ended. No drama — the block is back on.' +
         (saved.weekMin ? ' (You’ve still saved ' + HB.fmtMinutes(saved.weekMin) + ' this week.)' : '');
       reassureEl.hidden = false;
       fresh.meta.pendingReassure = null;

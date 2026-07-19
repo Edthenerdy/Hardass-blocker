@@ -124,7 +124,7 @@
     }
     if (!pro && hiddenCount > 0) {
       histNote.innerHTML = hiddenCount + ' older ' + (hiddenCount === 1 ? 'entry is' : 'entries are') +
-        ' beyond the free 7-day window. <a id="histUpgradeLink" href="#" style="color:var(--amber)">Your full history is a Pro thing — $7.99/mo.</a>';
+        ' hidden beyond the free 7-day window — not deleted; they return if you upgrade. <a id="histUpgradeLink" href="#" style="color:var(--amber)">Your full history is a Pro thing — $7.99/mo.</a>';
       histNote.hidden = false;
       document.getElementById('histUpgradeLink').addEventListener('click', async (e) => {
         e.preventDefault();
@@ -207,12 +207,19 @@
     if (serverShown && HB.PRO_SERVER) { try { serverShown.textContent = new URL(HB.PRO_SERVER).host; } catch (e) {} }
     if (proEl.server && HB.PRO_SERVER && !proEl.server.value) proEl.server.value = HB.PRO_SERVER;
 
-    proEl.upgradeBtn.hidden = !(linked && !isPro);
+    // Only offer the paid upgrade once billing is actually live — otherwise it's
+    // a dead purchase button. Manage/cancel stays available to real Pro accounts.
+    const live = HB.proLive();
+    proEl.upgradeBtn.hidden = !(linked && !isPro && live);
     proEl.manageBtn.hidden = !(linked && isPro);
+    const unlinkNote = document.getElementById('proUnlinkNote');
+    if (unlinkNote) unlinkNote.hidden = !isPro;
     if (linked) {
       proEl.status.textContent = isPro
         ? 'Pro active — linked as ' + state.pro.email + '. Unlimited sites, full history.'
-        : 'Linked as ' + state.pro.email + ' — free plan. Upgrade for unlimited sites and your full history ($7.99/mo).';
+        : (live
+          ? 'Linked as ' + state.pro.email + ' — free plan. Upgrade for unlimited sites and your full history ($7.99/mo).'
+          : 'Linked as ' + state.pro.email + ' — free plan. Pro billing isn\'t open yet; your free plan works forever.');
     } else {
       proEl.status.textContent = 'Free plan — up to ' + HB.FREE_MAX_SITES + ' blocked sites and ' + HB.FREE_HISTORY_DAYS + ' days of history. Pro is $7.99/mo: unlimited sites and your full history.';
     }
