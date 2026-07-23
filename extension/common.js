@@ -31,6 +31,37 @@ const HB = {
   // Rough minutes "saved" per blocked visit — powers the encouraging time-saved stat.
   MIN_PER_BLOCK: 15,
 
+  // A finished cooldown stays "ready to unblock" for this long. After that a fresh
+  // visit faces a NEW wait — so you can't wait a cooldown out once, never unblock,
+  // and then skip the wait forever on later attempts. Reopening DURING the wait
+  // never resets it (the timer keeps running while the tab is closed).
+  COOLDOWN_READY_GRACE_MIN: 10,
+
+  // Single source of truth for a domain's cooldown, shared by the blocked page and
+  // the background so every open tab agrees:
+  //   'none'    — no cooldown; a fresh wait is required
+  //   'running' — wait in progress (endsAt in the future)
+  //   'ready'   — wait finished within the grace window; unblock allowed now
+  //   'stale'   — wait finished long ago; must start over (treat like 'none')
+  cooldownStatus(state, domain, now) {
+    now = now || Date.now();
+    const cd = state && state.cooldowns && state.cooldowns[domain];
+    if (!cd || !cd.endsAt) return { status: 'none', endsAt: null };
+    if (cd.endsAt > now) return { status: 'running', endsAt: cd.endsAt };
+    if (now - cd.endsAt <= HB.COOLDOWN_READY_GRACE_MIN * 60000) return { status: 'ready', endsAt: cd.endsAt };
+    return { status: 'stale', endsAt: cd.endsAt };
+  },
+
+  // Global "times unblocked" across ALL sites — a common metric, not per-domain,
+  // so any unblock anywhere is reflected everywhere the count is shown.
+  unblockStats(relapseLog, now) {
+    now = now || Date.now();
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const all = (relapseLog || []).length;
+    const week = (relapseLog || []).filter(r => r.ts >= weekAgo).length;
+    return { allTime: all, thisWeek: week };
+  },
+
   isManaged(state) {
     return !!(state && state.team && state.team.deviceToken);
   },

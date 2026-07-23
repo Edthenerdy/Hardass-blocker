@@ -166,8 +166,11 @@
     return h ? (m ? h + 'h ' + m + 'm' : h + 'h') : m + 'm';
   }
 
-  function renderStats(stats, saved, held) {
+  function renderStats(stats, saved, held, glob) {
     const rows = [];
+    // "Times unblocked" is a common, global count (all sites) so any unblock
+    // anywhere shows up — not a per-domain figure that reads 0 on a fresh site.
+    const g = glob || { thisWeek: stats.thisWeek, allTime: stats.allTime };
     // Lead with the encouraging metrics so a disciplined user sees wins, not just zeros.
     if (held) {
       // Day zero shouldn't read as "0 days held" — that's deflating, not honest.
@@ -179,17 +182,17 @@
       rows.push(['Time saved this week', fmtMinutes(saved.weekMin), 'good']);
       rows.push(['Time saved, all time', fmtMinutes(saved.allMin), 'good']);
     }
-    rows.push(['Times unblocked this week', String(stats.thisWeek)]);
-    rows.push(['Times unblocked, all time', String(stats.allTime)]);
+    rows.push(['Times unblocked this week (all sites)', String(g.thisWeek)]);
+    rows.push(['Times unblocked, all time (all sites)', String(g.allTime)]);
     if (stats.avgGranted) rows.push(['Average pass you grant yourself', stats.avgGranted + ' min']);
-    if (stats.lastTs) rows.push(['Last unblock', whenText(stats.lastTs)]);
+    if (stats.lastTs) rows.push(['Last unblock (this site)', whenText(stats.lastTs)]);
     el.stats.innerHTML = '';
     for (const [k, v, cls] of rows) {
       const row = document.createElement('div'); row.className = 'row';
       const a = document.createElement('span'); a.textContent = k;
       const b = document.createElement('span'); b.textContent = v;
       if (cls === 'good') b.classList.add('good');
-      if (k.startsWith('Times unblocked this week') && stats.thisWeek >= 3) b.classList.add('flag');
+      if (k.startsWith('Times unblocked this week') && g.thisWeek >= 3) b.classList.add('flag');
       row.append(a, b); el.stats.appendChild(row);
     }
     // P0.5: keep the numbers honest — say how "time saved" is estimated.
@@ -244,6 +247,20 @@
     startTicking(updateUnblockState);
   }
 
+  // The pre-start state: a full, static wait and the "Start the cooldown" button.
+  // Reused both on first load and when a stale cooldown re-arms.
+  function showNotStarted(note) {
+    if (tick) { clearInterval(tick); tick = null; }
+    endsAt = null;
+    el.timer.classList.remove('done');
+    el.startBtn.hidden = false;
+    el.startBtn.disabled = false;
+    el.unblockBtn.hidden = true;
+    el.reasonLabel.hidden = true; el.reason.hidden = true; el.reasonHint.hidden = true;
+    el.timer.textContent = fmt(settings.cooldownMinutes * 60000);
+    el.timerCap.textContent = note || ('A ' + settings.cooldownMinutes + '-minute wait stands between you and this site.');
+  }
+
   async function initIndividual(state) {
     settings = state.settings;
     el.sub.textContent = domain ? domain + ' — you put this on your blocklist. Past-you meant it.' : 'This site is on your blocklist.';
@@ -251,7 +268,7 @@
     // time-saved counter reflects it. Preview mode (from the welcome page) records nothing.
     if (domain && !isPreview) await msg('logBlock', { domain });
     const fresh = await HB.get();
-    renderStats(HB.relapseStats(fresh.relapseLog, domain, Date.now()), HB.timeSavedStats(fresh.blockLog, Date.now()), HB.daysHeld(fresh.meta, Date.now()));
+    renderStats(HB.relapseStats(fresh.relapseLog, domain, Date.now()), HB.timeSavedStats(fresh.blockLog, Date.now()), HB.daysHeld(fresh.meta, Date.now()), HB.unblockStats(fresh.relapseLog, Date.now()));
 
     // P0.3: one-time post-cave note — calm, no shame, the block is simply back on.
     const reassureEl = document.getElementById('reassure');
@@ -264,11 +281,14 @@
       await HB.set({ meta: fresh.meta });
     }
 
-    const cd = state.cooldowns[domain];
-    if (cd) { endsAt = cd.endsAt; showCooldownRunning(); }
+    // Derive the timer from the shared cooldown state so every open tab agrees.
+    const st = HB.cooldownStatus(fresh, domain, Date.now());
+    if (st.status === 'running' || st.status === 'ready') { endsAt = st.endsAt; showCooldownRunning(); }
     else {
-      el.timer.textContent = fmt(settings.cooldownMinutes * 60000);
-      el.timerCap.textContent = 'A ' + settings.cooldownMinutes + '-minute wait stands between you and this site.';
+      // 'stale' means a finished-but-unused cooldown lingered — clear it so this
+      // genuine new attempt faces a fresh wait instead of an instant 00:00.
+      if (st.status === 'stale') { delete fresh.cooldowns[domain]; await HB.set({ cooldowns: fresh.cooldowns }); }
+      showNotStarted();
     }
 
     // P0.4: preview from the welcome page — show the scene, record nothing.
@@ -294,13 +314,30 @@
       el.unblockBtn.disabled = true;
       const res = await msg('grantAllowance', { domain, reason: el.reason.value });
       if (res && res.ok) { el.timerCap.textContent = 'Fine. ' + settings.allowanceMinutes + ' minutes. The clock is running.'; location.href = 'https://' + domain; }
-      else {
+      else if (res && res.error === 'cooldown-stale') {
+        // The finished cooldown sat unused too long — re-arm a fresh wait.
+        const s = await HB.get(); delete s.cooldowns[domain]; await HB.set({ cooldowns: s.cooldowns });
+        showNotStarted('That cooldown lapsed before you used it — here\'s a fresh one.');
+      } else {
         updateUnblockState();
         el.reasonHint.textContent = res && res.error === 'reason-too-short'
           ? 'Not good enough. At least ' + settings.minReasonChars + ' characters.'
           : 'Cooldown is not done yet.';
       }
     });
+
+    // Live sync: if another tab starts/finishes the cooldown or an allowance is
+    // granted, reflect it here so two open blocked tabs never disagree.
+    if (!isPreview && chrome.storage && chrome.storage.onChanged && chrome.storage.onChanged.addListener) {
+      chrome.storage.onChanged.addListener(async (changes, area) => {
+        if (area !== 'local' || !(changes.cooldowns || changes.allowances)) return;
+        const s = await HB.get();
+        if (s.allowances[domain] && s.allowances[domain] > Date.now()) { location.href = 'https://' + domain; return; }
+        const now = HB.cooldownStatus(s, domain, Date.now());
+        if ((now.status === 'running' || now.status === 'ready') && now.endsAt !== endsAt) { endsAt = now.endsAt; showCooldownRunning(); }
+        else if (now.status === 'none' && endsAt !== null) showNotStarted();
+      });
+    }
   }
 
   function initBypass() {

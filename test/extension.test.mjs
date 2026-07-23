@@ -132,6 +132,28 @@ ck('reblock sets the one-time reassure flag', store.meta.pendingReassure === 'p0
 ck('fmtMinutes: 210 -> "3h 30m"', HB.fmtMinutes(210) === '3h 30m', HB.fmtMinutes(210));
 ck('fmtMinutes: 45 -> "45m"', HB.fmtMinutes(45) === '45m', HB.fmtMinutes(45));
 
+// ===== cooldown status: running / grace-ready / stale (the "timer became 0" bug) =====
+ck('cooldownStatus: none with no record', HB.cooldownStatus({ cooldowns: {} }, 'cd.com', NOW).status === 'none');
+ck('cooldownStatus: running while endsAt is future', HB.cooldownStatus({ cooldowns: { 'cd.com': { endsAt: NOW + 60000 } } }, 'cd.com', NOW).status === 'running');
+ck('cooldownStatus: ready just after it finishes', HB.cooldownStatus({ cooldowns: { 'cd.com': { endsAt: NOW - 60000 } } }, 'cd.com', NOW).status === 'ready');
+ck('cooldownStatus: stale long after it finished', HB.cooldownStatus({ cooldowns: { 'cd.com': { endsAt: NOW - 30 * 60000 } } }, 'cd.com', NOW).status === 'stale');
+store.blocklist.push({ domain: 'cd.com', ruleId: 90 });
+// A finished-but-unused cooldown must NOT grant an instant unblock later.
+store.cooldowns['cd.com'] = { startedAt: NOW - 40 * 60000, endsAt: NOW - 30 * 60000 };
+let gr = await msg('grantAllowance', { domain: 'cd.com', reason: 'trying to reuse an old cooldown' });
+ck('grantAllowance rejects a stale cooldown (no free skip)', !gr.ok && gr.error === 'cooldown-stale', JSON.stringify(gr));
+const sc = await msg('startCooldown', { domain: 'cd.com' });
+ck('startCooldown re-arms a fresh wait after stale', sc.ok && sc.endsAt > NOW + 60000, JSON.stringify(sc));
+const running = store.cooldowns['cd.com'].endsAt;
+const sc2 = await msg('startCooldown', { domain: 'cd.com' });
+ck('startCooldown reuses a running cooldown (does not reset)', sc2.endsAt === running, 'reset');
+delete store.cooldowns['cd.com'];
+
+// ===== global "times unblocked" (common, all sites) =====
+const ub = HB.unblockStats([{ domain: 'a.com', ts: NOW - 2 * DAY }, { domain: 'b.com', ts: NOW - 1 * DAY }, { domain: 'a.com', ts: NOW - 10 * DAY }], NOW);
+ck('unblockStats: all-time counts every site', ub.allTime === 3, 'all=' + ub.allTime);
+ck('unblockStats: this-week excludes the 10-day-old one', ub.thisWeek === 2, 'week=' + ub.thisWeek);
+
 // ===== P1 freemium: the free wall =====
 // fill up to the cap (3 seeds + p0test = 4 at this point)
 while (store.blocklist.length < HB.FREE_MAX_SITES) await msg('addBlock', { domain: 'filler' + store.blocklist.length + '.com' });

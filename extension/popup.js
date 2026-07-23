@@ -67,8 +67,10 @@
       if (state.blocklist.length) {
         const saved = HB.timeSavedStats(state.blockLog, Date.now());
         const held = HB.daysHeld(state.meta, Date.now());
+        const un = HB.unblockStats(state.relapseLog, Date.now());
         winStrip.textContent = '🛡 ' + HB.fmtMinutes(saved.weekMin) + ' saved this week · ' +
-          (held.current === 0 ? 'holding since today' : held.current + (held.current === 1 ? ' day held' : ' days held'));
+          (held.current === 0 ? 'holding since today' : held.current + (held.current === 1 ? ' day held' : ' days held')) +
+          ' · ' + un.thisWeek + ' unblocked this week';
       } else {
         winStrip.textContent = '🛡 Block your first site to start saving time.';
       }

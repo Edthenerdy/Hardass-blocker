@@ -109,6 +109,40 @@ reset();
   ck('unblock button grants a pass', !!store.allowances['instagram.com'], 'no allowance');
 }
 
+console.log('\n== BLOCKED PAGE: timer states (the "became 0" bug) ==');
+reset();
+{
+  // Fresh visit, no cooldown: full static wait + Start, never 00:00.
+  const { doc } = makePage('blocked.html', '?d=instagram.com'); await tick();
+  ck('fresh block shows a full wait, not 00:00', doc.getElementById('timer').textContent === '20:00', doc.getElementById('timer').textContent);
+  ck('fresh block shows the Start button', !doc.getElementById('startBtn').hidden, 'start hidden');
+}
+reset();
+{
+  // A finished-but-unused cooldown lingered: a new visit must re-arm a fresh wait,
+  // not show 00:00 "done" and let the wait be skipped.
+  store.cooldowns['instagram.com'] = { startedAt: Date.now() - 40 * 60e3, endsAt: Date.now() - 30 * 60e3 };
+  const { doc } = makePage('blocked.html', '?d=instagram.com'); await tick();
+  ck('stale cooldown re-arms to a fresh full wait', doc.getElementById('timer').textContent === '20:00', doc.getElementById('timer').textContent);
+  ck('stale cooldown shows Start again (not a done timer)', !doc.getElementById('startBtn').hidden, 'start hidden');
+  ck('stale cooldown record is cleared from storage', !store.cooldowns['instagram.com'], 'still present');
+}
+reset();
+{
+  // A running cooldown started elsewhere shows as running here (shared state).
+  store.cooldowns['instagram.com'] = { startedAt: Date.now() - 60e3, endsAt: Date.now() + 19 * 60e3 };
+  const { doc } = makePage('blocked.html', '?d=instagram.com'); await tick();
+  ck('running cooldown hides Start and shows Unblock', doc.getElementById('startBtn').hidden && !doc.getElementById('unblockBtn').hidden, 'wrong controls');
+  ck('running cooldown shows a live countdown (~19m), not 00:00', /^\d\d:\d\d$/.test(doc.getElementById('timer').textContent) && doc.getElementById('timer').textContent !== '00:00', doc.getElementById('timer').textContent);
+}
+reset();
+{
+  // Global unblock counter is shown on the block page (common, all sites).
+  store.relapseLog = [{ domain: 'x.com', ts: Date.now() - 1 * 86400000, reason: 'a', grantedMin: 10 }, { domain: 'y.com', ts: Date.now() - 2 * 86400000, reason: 'b', grantedMin: 10 }];
+  const { doc } = makePage('blocked.html', '?d=instagram.com'); await tick();
+  ck('block page shows a global "all sites" unblock count', /all sites/.test(doc.getElementById('stats').textContent), doc.getElementById('stats').textContent.slice(0, 80));
+}
+
 console.log('\n== BLOCKED PAGE: post-cave reassure + preview mode ==');
 reset();
 {

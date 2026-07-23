@@ -106,8 +106,9 @@ async function startCooldown(rawDomain) {
   const domain = HB.normalizeDomain(rawDomain);
   const state = await HB.get();
   if (!state.blocklist.some(b => b.domain === domain)) return { ok: false, error: 'not-blocked' };
-  const existing = state.cooldowns[domain];
-  if (existing && existing.endsAt > Date.now()) return { ok: true, endsAt: existing.endsAt };
+  // A running or recently-finished (ready) cooldown is reused; a stale one re-arms.
+  const st = HB.cooldownStatus(state, domain);
+  if (st.status === 'running' || st.status === 'ready') return { ok: true, endsAt: st.endsAt };
   const endsAt = Date.now() + state.settings.cooldownMinutes * 60000;
   state.cooldowns[domain] = { startedAt: Date.now(), endsAt };
   await HB.set({ cooldowns: state.cooldowns });
@@ -118,8 +119,10 @@ async function grantAllowance(rawDomain, reason) {
   const domain = HB.normalizeDomain(rawDomain);
   const state = await HB.get();
   if (!state.blocklist.some(b => b.domain === domain)) return { ok: false, error: 'not-blocked' };
-  const cd = state.cooldowns[domain];
-  if (!cd || cd.endsAt > Date.now()) return { ok: false, error: 'cooldown-not-done' };
+  // Only a cooldown that finished within the grace window unlocks. 'running' isn't
+  // done; 'stale' expired and must be restarted (prevents banking a skip).
+  const st = HB.cooldownStatus(state, domain);
+  if (st.status !== 'ready') return { ok: false, error: st.status === 'stale' ? 'cooldown-stale' : 'cooldown-not-done' };
   if (!reason || reason.trim().length < state.settings.minReasonChars) return { ok: false, error: 'reason-too-short' };
   const mins = state.settings.allowanceMinutes;
   const expiresAt = Date.now() + mins * 60000;
