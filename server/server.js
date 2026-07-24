@@ -346,6 +346,36 @@ async function api(req, res, pathname) {
     return send(res, 404, { ok: false, error: 'unknown billing route' });
   }
 
+  /* ----- Pro cloud sync (consumer user token) ----- */
+  if (seg[0] === 'pro') {
+    const userRec = auth(req, 'user');
+    if (!userRec) return send(res, 401, { ok: false, error: 'unauthorized' });
+    const u = data.users.find(x => x.id === userRec.id);
+    if (!u) return send(res, 401, { ok: false, error: 'unknown user' });
+
+    // GET /api/pro/profile — the cloud copy of blocklist/settings/streak.
+    if (method === 'GET' && seg[1] === 'profile') {
+      return send(res, 200, { ok: true, profile: u.syncProfile || null, updatedAt: (u.syncProfile && u.syncProfile.updatedAt) || 0 });
+    }
+    // POST /api/pro/profile {profile} — store the merged profile. Only the small,
+    // known fields are persisted; browsing and typed reasons are never accepted.
+    if (method === 'POST' && seg[1] === 'profile') {
+      const body = await readBody(req);
+      const p = body && body.profile;
+      if (!p || typeof p !== 'object') return send(res, 400, { ok: false, error: 'no profile' });
+      u.syncProfile = {
+        blocklist: Array.isArray(p.blocklist) ? p.blocklist.slice(0, 5000).map(b => ({ domain: normalizeDomain(b.domain), addedAt: Number(b.addedAt) || 0 })).filter(b => b.domain) : [],
+        settings: (p.settings && typeof p.settings === 'object') ? p.settings : {},
+        meta: (p.meta && typeof p.meta === 'object') ? p.meta : {},
+        removed: (p.removed && typeof p.removed === 'object') ? p.removed : {},
+        updatedAt: Number(p.updatedAt) || Date.now()
+      };
+      db.save();
+      return send(res, 200, { ok: true, updatedAt: u.syncProfile.updatedAt });
+    }
+    return send(res, 404, { ok: false, error: 'unknown pro route' });
+  }
+
   /* ----- device endpoints ----- */
 
   // POST /api/enroll {code, deviceName}

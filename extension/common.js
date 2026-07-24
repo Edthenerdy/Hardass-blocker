@@ -14,7 +14,12 @@ const HB = {
     meta: { installedAt: null, lastCaveTs: null, bestDaysHeld: 0 },
     pro: null,
     team: null,
-    policy: null
+    policy: null,
+    // Pro cloud sync: tombstones for removed sites (domain -> removedAt) so a
+    // removal propagates and isn't undone by a peer that still has the site;
+    // syncUpdatedAt is the recency of the last LOCAL change, for settings merge.
+    removed: {},
+    syncUpdatedAt: 0
   },
 
   // Freemium: the free tier blocks up to this many sites. The Cooldown itself is
@@ -60,6 +65,63 @@ const HB = {
     const all = (relapseLog || []).length;
     const week = (relapseLog || []).filter(r => r.ts >= weekAgo).length;
     return { allTime: all, thisWeek: week };
+  },
+
+  /* ---------------- Pro cloud sync (opt-in) ----------------
+     Only the small, low-sensitivity state travels: blocklist, settings, streak
+     anchors, and removal tombstones. Browsing and the reasons you type never do. */
+
+  // The syncable slice of local state.
+  buildProfile(state) {
+    const m = (state && state.meta) || {};
+    return {
+      blocklist: ((state && state.blocklist) || []).map(b => ({ domain: b.domain, addedAt: b.addedAt || 0 })),
+      settings: (state && state.settings) || {},
+      meta: { installedAt: m.installedAt || null, lastCaveTs: m.lastCaveTs || null, bestDaysHeld: m.bestDaysHeld || 0 },
+      removed: (state && state.removed) || {},
+      updatedAt: (state && state.syncUpdatedAt) || 0
+    };
+  },
+
+  // Merge one user's local profile with their cloud profile (their own devices).
+  // Blocklist = union minus tombstoned removals; settings = most-recently-changed
+  // device wins; streak = keep the best / most-recent. Pure + deterministic.
+  mergeProfiles(local, cloud) {
+    local = local || {}; cloud = cloud || {};
+    // Tombstones: domain -> latest removedAt across both sides.
+    const removed = {};
+    for (const src of [local.removed || {}, cloud.removed || {}]) {
+      for (const d in src) removed[d] = Math.max(removed[d] || 0, src[d] || 0);
+    }
+    // Union blocklist by domain, keeping the earliest addedAt seen.
+    const byDomain = {};
+    for (const b of (local.blocklist || []).concat(cloud.blocklist || [])) {
+      if (!b || !b.domain) continue;
+      const prev = byDomain[b.domain];
+      const addedAt = b.addedAt || 0;
+      byDomain[b.domain] = { domain: b.domain, addedAt: prev ? Math.min(prev.addedAt || addedAt, addedAt) : addedAt };
+    }
+    // A domain survives only if it wasn't removed at/after it was (re-)added.
+    const blocklist = Object.keys(byDomain)
+      .map(d => byDomain[d])
+      .filter(b => !(removed[b.domain] && removed[b.domain] >= b.addedAt))
+      .sort((a, b) => a.domain.localeCompare(b.domain));
+    // Keep only tombstones that are still doing something (site not currently listed).
+    const listed = new Set(blocklist.map(b => b.domain));
+    const activeRemoved = {};
+    for (const d in removed) if (!listed.has(d)) activeRemoved[d] = removed[d];
+    // Settings: whole-object, most-recently-changed device wins.
+    const localNewer = (local.updatedAt || 0) >= (cloud.updatedAt || 0);
+    const settings = (localNewer ? local.settings : cloud.settings) || local.settings || cloud.settings || {};
+    // Streak: earliest install, most recent cave, best-ever days.
+    const lm = local.meta || {}, cm = cloud.meta || {};
+    const installedAt = [lm.installedAt, cm.installedAt].filter(Boolean).sort((a, b) => a - b)[0] || null;
+    const meta = {
+      installedAt,
+      lastCaveTs: Math.max(lm.lastCaveTs || 0, cm.lastCaveTs || 0) || null,
+      bestDaysHeld: Math.max(lm.bestDaysHeld || 0, cm.bestDaysHeld || 0)
+    };
+    return { blocklist, settings, meta, removed: activeRemoved, updatedAt: Math.max(local.updatedAt || 0, cloud.updatedAt || 0) };
   },
 
   isManaged(state) {

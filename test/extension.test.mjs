@@ -154,6 +154,34 @@ const ub = HB.unblockStats([{ domain: 'a.com', ts: NOW - 2 * DAY }, { domain: 'b
 ck('unblockStats: all-time counts every site', ub.allTime === 3, 'all=' + ub.allTime);
 ck('unblockStats: this-week excludes the 10-day-old one', ub.thisWeek === 2, 'week=' + ub.thisWeek);
 
+// ===== Pro cloud sync: merge logic (pure) =====
+// union of two devices' blocklists
+let mg = HB.mergeProfiles(
+  { blocklist: [{ domain: 'a.com', addedAt: 100 }], settings: { cooldownMinutes: 20 }, meta: {}, removed: {}, updatedAt: 100 },
+  { blocklist: [{ domain: 'b.com', addedAt: 200 }], settings: { cooldownMinutes: 30 }, meta: {}, removed: {}, updatedAt: 200 });
+ck('merge: blocklist is the union across devices', mg.blocklist.map(b => b.domain).join(',') === 'a.com,b.com', JSON.stringify(mg.blocklist));
+ck('merge: newer device wins on settings', mg.settings.cooldownMinutes === 30, JSON.stringify(mg.settings));
+// a removal (tombstone) on one device wins over a peer that still lists it
+mg = HB.mergeProfiles(
+  { blocklist: [{ domain: 'a.com', addedAt: 100 }], removed: {}, updatedAt: 100 },
+  { blocklist: [], removed: { 'a.com': 300 }, updatedAt: 300 });
+ck('merge: a tombstoned removal wins over a stale peer', !mg.blocklist.some(b => b.domain === 'a.com'), JSON.stringify(mg.blocklist));
+ck('merge: active tombstone is kept', mg.removed['a.com'] === 300, JSON.stringify(mg.removed));
+// re-adding after a removal wins (addedAt newer than removedAt)
+mg = HB.mergeProfiles(
+  { blocklist: [{ domain: 'a.com', addedAt: 400 }], removed: {}, updatedAt: 400 },
+  { blocklist: [], removed: { 'a.com': 300 }, updatedAt: 300 });
+ck('merge: re-adding after a removal wins', mg.blocklist.some(b => b.domain === 'a.com'), JSON.stringify(mg.blocklist));
+ck('merge: moot tombstone is dropped once re-added', !mg.removed['a.com'], JSON.stringify(mg.removed));
+// streak: best is the max, last cave is the most recent
+mg = HB.mergeProfiles(
+  { blocklist: [], meta: { installedAt: 500, lastCaveTs: 900, bestDaysHeld: 3 }, updatedAt: 1 },
+  { blocklist: [], meta: { installedAt: 100, lastCaveTs: 800, bestDaysHeld: 7 }, updatedAt: 2 });
+ck('merge: streak keeps best + earliest install + latest cave', mg.meta.bestDaysHeld === 7 && mg.meta.installedAt === 100 && mg.meta.lastCaveTs === 900, JSON.stringify(mg.meta));
+// buildProfile strips to the small syncable slice (no history)
+const bp = HB.buildProfile({ blocklist: [{ domain: 'z.com', ruleId: 9, addedAt: 5 }], settings: { minReasonChars: 15 }, meta: { installedAt: 1, bestDaysHeld: 2 }, relapseLog: [{ domain: 'z.com' }], removed: {}, syncUpdatedAt: 42 });
+ck('buildProfile carries blocklist/settings/streak, not history', !!bp.blocklist && !!bp.settings && bp.updatedAt === 42 && !('relapseLog' in bp), JSON.stringify(Object.keys(bp)));
+
 // ===== P1 freemium: the free wall =====
 // fill up to the cap (3 seeds + p0test = 4 at this point)
 while (store.blocklist.length < HB.FREE_MAX_SITES) await msg('addBlock', { domain: 'filler' + store.blocklist.length + '.com' });

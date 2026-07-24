@@ -163,7 +163,7 @@
     el.cooldown.value = settings.cooldownMinutes;
     el.allowance.value = settings.allowanceMinutes;
     el.reasonChars.value = settings.minReasonChars;
-    await HB.set({ settings: { ...state.settings, ...settings } });
+    await HB.set({ settings: { ...state.settings, ...settings }, syncUpdatedAt: Date.now() });
     await chrome.runtime.sendMessage({ type: 'applyRules' });
     el.saveMsg.textContent = 'Saved.';
     setTimeout(() => { el.saveMsg.textContent = ''; }, 1800);
@@ -214,6 +214,8 @@
     proEl.manageBtn.hidden = !(linked && isPro);
     const unlinkNote = document.getElementById('proUnlinkNote');
     if (unlinkNote) unlinkNote.hidden = !isPro;
+    const syncNote = document.getElementById('proSyncNote');
+    if (syncNote) syncNote.hidden = !isPro; // sync is a Pro feature
     if (linked) {
       proEl.status.textContent = isPro
         ? 'Pro active — linked as ' + state.pro.email + '. Unlimited sites, full history.'

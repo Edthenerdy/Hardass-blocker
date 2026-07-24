@@ -4,6 +4,13 @@
 sync is an **opt-in Holdfast Pro feature**, so it never breaks the privacy promise
 or the per-device default, and it gives Pro a real reason to exist.
 
+> **Status: BUILT & VERIFIED (2026-07-24).** Server endpoints, extension merge/wiring,
+> privacy + options copy are all in. Verified by 8 merge unit tests and a 9-check
+> two-device end-to-end run against the live dev server (`test/sync-e2e.mjs`): two
+> devices converge, settings/streak merge, removals propagate via tombstone, re-adds
+> win, unauth is rejected. It stays dormant for real users until `PRO_SERVER` is set
+> and the account server is deployed (same gate as billing).
+
 ## Where things stand today
 - **Free / unlinked:** blocklist, settings, streak, history all in `chrome.storage.local`.
   Never leaves the device. Each device independent. *(No change — this is the default.)*

@@ -83,7 +83,8 @@ async function addBlock(rawDomain) {
     return { ok: false, error: 'free-limit', limit: HB.FREE_MAX_SITES };
   }
   state.blocklist.push({ domain, ruleId: nextRuleId(state), addedAt: Date.now() });
-  await HB.set({ blocklist: state.blocklist });
+  if (state.removed) delete state.removed[domain]; // re-adding clears any tombstone
+  await HB.set({ blocklist: state.blocklist, removed: state.removed || {}, syncUpdatedAt: Date.now() });
   await applyRules();
   return { ok: true, domain };
 }
@@ -96,8 +97,10 @@ async function removeBlock(rawDomain) {
   state.blocklist = state.blocklist.filter(b => b.domain !== domain);
   delete state.cooldowns[domain];
   delete state.allowances[domain];
+  const removed = state.removed || {};
+  removed[domain] = Date.now(); // tombstone so the removal propagates via Pro sync
   await chrome.alarms.clear(REBLOCK_PREFIX + domain);
-  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances });
+  await HB.set({ blocklist: state.blocklist, cooldowns: state.cooldowns, allowances: state.allowances, removed, syncUpdatedAt: Date.now() });
   await applyRules();
   return { ok: true };
 }
@@ -262,7 +265,50 @@ async function proLink(serverUrl, email, password) {
   const active = !!(j.status && j.status.plan === 'pro');
   const pro = { serverUrl, email, token: j.token, active, plan: (j.status && j.status.plan) || 'free', checkedAt: Date.now() };
   await HB.set({ pro });
+  // Converge this device with the account's cloud profile right after linking.
+  try { await proSyncProfile(); } catch (e) { /* offline — will sync later */ }
   return { ok: true, pro };
+}
+
+// Opt-in cloud sync of the small profile (blocklist/settings/streak) across a
+// user's own devices. Pulls the cloud copy, merges locally, writes both ways.
+// Managed devices are policy-driven and never use this.
+async function proSyncProfile() {
+  const state = await HB.get();
+  // Cross-device sync is a Pro feature. Free (even if linked) stays per-device.
+  if (HB.isManaged(state) || !state.pro || !state.pro.token || !HB.isPro(state)) return { ok: false, error: 'not-synced' };
+  const base = String(state.pro.serverUrl || '').replace(/\/+$/, '');
+  const authHdr = { 'Authorization': 'Bearer ' + state.pro.token };
+  let cloud = null;
+  try {
+    const res = await fetch(base + '/api/pro/profile', { headers: authHdr });
+    const j = await res.json();
+    if (j && j.ok) cloud = j.profile;
+    else if (res.status === 401) return { ok: false, error: 'unauthorized' };
+  } catch (e) { return { ok: false, error: 'offline' }; }
+
+  const merged = HB.mergeProfiles(HB.buildProfile(state), cloud);
+  merged.updatedAt = Date.now();
+  // Rebuild the local blocklist, preserving existing ruleIds and minting new ones.
+  const byDomain = {}; state.blocklist.forEach(b => { byDomain[b.domain] = b.ruleId; });
+  let maxId = state.blocklist.reduce((m, b) => Math.max(m, b.ruleId || 0), 0);
+  const newBlocklist = merged.blocklist.map(b => ({ domain: b.domain, addedAt: b.addedAt, ruleId: byDomain[b.domain] || (++maxId) }));
+  await HB.set({
+    blocklist: newBlocklist,
+    settings: { ...state.settings, ...merged.settings },
+    meta: { ...state.meta, installedAt: merged.meta.installedAt || state.meta.installedAt, lastCaveTs: merged.meta.lastCaveTs, bestDaysHeld: merged.meta.bestDaysHeld },
+    removed: merged.removed,
+    syncUpdatedAt: merged.updatedAt
+  });
+  await applyRules();
+  // Push the merged result up so the cloud (and peers) converge too.
+  try {
+    await fetch(base + '/api/pro/profile', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHdr },
+      body: JSON.stringify({ profile: { blocklist: newBlocklist.map(b => ({ domain: b.domain, addedAt: b.addedAt })), settings: merged.settings, meta: merged.meta, removed: merged.removed, updatedAt: merged.updatedAt } })
+    });
+  } catch (e) { /* offline — local is already merged; next sync pushes */ }
+  return { ok: true, count: newBlocklist.length };
 }
 
 async function proSync() {
@@ -283,6 +329,8 @@ async function proSync() {
   state.pro.plan = j.plan || 'free';
   state.pro.checkedAt = Date.now();
   await HB.set({ pro: state.pro });
+  // Entitlement is current; now converge the synced profile across devices.
+  try { await proSyncProfile(); } catch (e) { /* offline — profile syncs next time */ }
   return { ok: true, pro: state.pro };
 }
 
